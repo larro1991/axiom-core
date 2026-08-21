@@ -1,0 +1,350 @@
+# AMD 10GbE (XGBE) Network Controller
+# Found in AMD EPYC and some Ryzen platforms
+# Reference: AMD 10Gb Ethernet Software Developers Guide
+
+device:
+  name: AMD-XGBE
+  class: network
+  version: "1.0"
+  vendor_id: 0x1022
+  device_id: 0x1458  # XGBE 10GbE
+  description: "AMD 10 Gigabit Ethernet Controller"
+
+variants:
+  - device_id: 0x1458
+    name: "10GbE (XGBE)"
+  - device_id: 0x1459
+    name: "10GbE VF"
+
+memory_map:
+  - name: BAR0
+    size: 0x200000
+    type: mmio
+    description: "Main register space"
+
+registers:
+  # DMA Mode
+  - name: DMA_MODE
+    offset: 0x3000
+    size: 4
+    access: rw
+    description: "DMA Mode Register"
+    fields:
+      - name: SWR
+        bit: 0
+        description: "Software Reset"
+      - name: INTM
+        bits: [13, 12]
+        description: "Interrupt Mode"
+
+  # DMA System Bus Mode
+  - name: DMA_SYSBUSMODE
+    offset: 0x3004
+    size: 4
+    access: rw
+    fields:
+      - name: FB
+        bit: 0
+        description: "Fixed Burst"
+      - name: AAL
+        bit: 12
+        description: "Address Aligned Beats"
+
+  # DMA Interrupt Status
+  - name: DMA_ISR
+    offset: 0x3008
+    size: 4
+    access: ro
+
+  # DMA Debug Status
+  - name: DMA_DEBUG_STATUS0
+    offset: 0x300C
+    size: 4
+    access: ro
+
+  # TX DMA Channel registers
+  - name: DMA_CH0_TX_CTRL
+    offset: 0x3100
+    size: 4
+    access: rw
+    description: "TX Channel 0 Control"
+    fields:
+      - name: ST
+        bit: 0
+        description: "Start TX"
+      - name: TSE
+        bit: 12
+        description: "TCP Segmentation Enable"
+
+  - name: DMA_CH0_TX_RING_BASE_HI
+    offset: 0x3110
+    size: 4
+    access: rw
+
+  - name: DMA_CH0_TX_RING_BASE_LO
+    offset: 0x3114
+    size: 4
+    access: rw
+
+  - name: DMA_CH0_TX_RING_LEN
+    offset: 0x3118
+    size: 4
+    access: rw
+
+  - name: DMA_CH0_TX_CURR_DESC_HI
+    offset: 0x3144
+    size: 4
+    access: ro
+
+  - name: DMA_CH0_TX_CURR_DESC_LO
+    offset: 0x3148
+    size: 4
+    access: ro
+
+  - name: DMA_CH0_TX_TAIL_PTR
+    offset: 0x3154
+    size: 4
+    access: rw
+    description: "TX Tail Pointer"
+
+  # RX DMA Channel registers
+  - name: DMA_CH0_RX_CTRL
+    offset: 0x3180
+    size: 4
+    access: rw
+    description: "RX Channel 0 Control"
+    fields:
+      - name: SR
+        bit: 0
+        description: "Start RX"
+      - name: RBSZ
+        bits: [14, 1]
+        description: "Receive Buffer Size"
+
+  - name: DMA_CH0_RX_RING_BASE_HI
+    offset: 0x3190
+    size: 4
+    access: rw
+
+  - name: DMA_CH0_RX_RING_BASE_LO
+    offset: 0x3194
+    size: 4
+    access: rw
+
+  - name: DMA_CH0_RX_RING_LEN
+    offset: 0x3198
+    size: 4
+    access: rw
+
+  - name: DMA_CH0_RX_CURR_DESC_HI
+    offset: 0x31C4
+    size: 4
+    access: ro
+
+  - name: DMA_CH0_RX_CURR_DESC_LO
+    offset: 0x31C8
+    size: 4
+    access: ro
+
+  - name: DMA_CH0_RX_TAIL_PTR
+    offset: 0x31D4
+    size: 4
+    access: rw
+
+  # Channel Interrupt Enable
+  - name: DMA_CH0_INT_ENABLE
+    offset: 0x3138
+    size: 4
+    access: rw
+
+  # MAC Configuration
+  - name: MAC_CONFIG
+    offset: 0x0000
+    size: 4
+    access: rw
+    fields:
+      - name: TE
+        bit: 0
+        description: "Transmitter Enable"
+      - name: RE
+        bit: 1
+        description: "Receiver Enable"
+      - name: PS
+        bit: 15
+        description: "Port Select (0=1G, 1=10G)"
+      - name: FES
+        bit: 14
+        description: "Speed (0=10M, 1=100M)"
+      - name: DM
+        bit: 11
+        description: "Duplex Mode"
+      - name: JE
+        bit: 16
+        description: "Jumbo Enable"
+
+  # MAC Address
+  - name: MAC_ADDR0_HIGH
+    offset: 0x0300
+    size: 4
+    access: rw
+
+  - name: MAC_ADDR0_LOW
+    offset: 0x0304
+    size: 4
+    access: rw
+
+  # Packet Filter
+  - name: MAC_PKT_FILTER
+    offset: 0x0008
+    size: 4
+    access: rw
+    fields:
+      - name: PR
+        bit: 0
+        description: "Promiscuous Mode"
+      - name: PM
+        bit: 4
+        description: "Pass All Multicast"
+
+  # Flow Control
+  - name: MAC_Q0_TX_FLOW
+    offset: 0x0070
+    size: 4
+    access: rw
+
+  # MMC (MAC Management Counters)
+  - name: MMC_CTRL
+    offset: 0x0700
+    size: 4
+    access: rw
+
+  # PHY Interface
+  - name: MAC_MDIO_ADDR
+    offset: 0x0200
+    size: 4
+    access: rw
+
+  - name: MAC_MDIO_DATA
+    offset: 0x0204
+    size: 4
+    access: rw
+
+  # Timestamp
+  - name: MAC_TIMESTAMP_CTRL
+    offset: 0x0B00
+    size: 4
+    access: rw
+
+constants:
+  MAX_QUEUES: 4
+  MAX_FRAME_SIZE: 16383
+
+init_sequence:
+  # Software reset
+  - write:
+      register: DMA_MODE
+      value: 0x01
+  - wait_ms: 10
+
+  # Wait for reset complete
+  - poll:
+      register: DMA_MODE
+      expected: 0x00
+      mask: 0x01
+      timeout_ms: 1000
+
+  # Configure DMA system bus mode
+  - write:
+      register: DMA_SYSBUSMODE
+      value: 0x00001001  # FB | AAL
+
+  # Set up TX ring
+  - write:
+      register: DMA_CH0_TX_RING_BASE_HI
+      value: $tx_ring_phys_high
+  - write:
+      register: DMA_CH0_TX_RING_BASE_LO
+      value: $tx_ring_phys_low
+  - write:
+      register: DMA_CH0_TX_RING_LEN
+      value: $tx_ring_entries
+
+  # Set up RX ring with buffer size
+  - write:
+      register: DMA_CH0_RX_RING_BASE_HI
+      value: $rx_ring_phys_high
+  - write:
+      register: DMA_CH0_RX_RING_BASE_LO
+      value: $rx_ring_phys_low
+  - write:
+      register: DMA_CH0_RX_RING_LEN
+      value: $rx_ring_entries
+  - write:
+      register: DMA_CH0_RX_CTRL
+      value: 0x00007FFE  # 16KB buffer, start RX
+
+  # Enable TX/RX DMA
+  - write:
+      register: DMA_CH0_TX_CTRL
+      value: 0x00001001  # ST | TSE
+
+  # Configure MAC
+  - write:
+      register: MAC_CONFIG
+      value: 0x00018003  # TE | RE | JE | 10G
+
+  # Enable interrupts
+  - write:
+      register: DMA_CH0_INT_ENABLE
+      value: 0x000000FF
+
+operations:
+  - name: tx
+    type: descriptor_ring
+    steps:
+      - write:
+          register: DMA_CH0_TX_TAIL_PTR
+          value: $new_tail
+
+  - name: rx_poll
+    type: descriptor_ring
+    returns:
+      - $rx_len
+    steps:
+      - read:
+          register: DMA_CH0_RX_CURR_DESC_LO
+          into: $curr
+
+  - name: read_mac
+    type: read
+    returns:
+      - $mac_high
+      - $mac_low
+    steps:
+      - read:
+          register: MAC_ADDR0_HIGH
+          into: $mac_high
+      - read:
+          register: MAC_ADDR0_LOW
+          into: $mac_low
+
+interrupts:
+  status_register: DMA_ISR
+  handlers:
+    - name: tx_complete
+      channel: 0
+      action: process_tx
+    - name: rx_ready
+      channel: 0
+      action: process_rx
+
+features:
+  - checksum_offload: [ipv4, tcp, udp]
+  - tso:
+      max_size: 65535
+  - lro: true
+  - rss:
+      max_queues: 4
+  - vlan: true
+  - ptp: true
+  - eee: true

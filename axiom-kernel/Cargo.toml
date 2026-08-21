@@ -1,0 +1,30 @@
+[package]
+name = "axiom-kernel"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "AXIOM Kernel - ties runtime, networking, and hardware together"
+
+[features]
+default = ["std", "linux"]
+std = ["axiom-types/std", "axiom-codec/std", "axiom-transport/std", "axiom-runtime/std", "tokio"]
+linux = []
+cloud = []
+vm = []
+
+[dependencies]
+axiom-types = { workspace = true }
+axiom-codec = { workspace = true }
+axiom-crypto = { workspace = true }
+axiom-clock = { workspace = true }
+axiom-router = { workspace = true }
+axiom-transport = { workspace = true }
+axiom-hal = { workspace = true }
+axiom-runtime = { workspace = true }
+tokio = { workspace = true, optional = true }
+thiserror = { workspace = true }
+hashbrown = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

@@ -1,0 +1,22 @@
+[package]
+name = "axiom-crypto"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Cryptographic operations for AXIOM protocol"
+
+[features]
+default = ["std"]
+std = ["axiom-types/std"]
+
+[dependencies]
+axiom-types = { workspace = true }
+axiom-codec = { workspace = true }
+ed25519-dalek = { workspace = true }
+x25519-dalek = { workspace = true }
+blake3 = { workspace = true }
+chacha20poly1305 = { workspace = true }
+rand = { workspace = true }
+thiserror = { workspace = true }
+hashbrown = { workspace = true }

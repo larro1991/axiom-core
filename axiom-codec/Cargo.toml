@@ -1,0 +1,23 @@
+[package]
+name = "axiom-codec"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Zero-copy frame codec for AXIOM protocol"
+
+[features]
+default = ["std"]
+std = ["axiom-types/std"]
+
+[dependencies]
+axiom-types = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "codec_bench"
+harness = false

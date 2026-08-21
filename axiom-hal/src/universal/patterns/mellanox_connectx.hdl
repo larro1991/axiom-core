@@ -1,0 +1,341 @@
+# Mellanox ConnectX-4/5/6 Ethernet/InfiniBand
+# High-performance data center adapter
+# Reference: ConnectX Programmer's Reference Manual
+
+device:
+  name: Mellanox-ConnectX
+  class: network
+  version: "1.0"
+  vendor_id: 0x15B3
+  device_id: 0x1013  # ConnectX-4
+  description: "Mellanox ConnectX High-Performance Network Adapter"
+
+variants:
+  # ConnectX-4
+  - device_id: 0x1013
+    name: "ConnectX-4 100GbE"
+  - device_id: 0x1015
+    name: "ConnectX-4 EN 100GbE"
+  - device_id: 0x1017
+    name: "ConnectX-4 LX 25GbE"
+  - device_id: 0x1019
+    name: "ConnectX-4 LX EN 25GbE"
+  # ConnectX-5
+  - device_id: 0x1017
+    name: "ConnectX-5 100GbE"
+  - device_id: 0x1019
+    name: "ConnectX-5 EN 100GbE"
+  - device_id: 0x101B
+    name: "ConnectX-5 EX 200GbE"
+  # ConnectX-6
+  - device_id: 0x101D
+    name: "ConnectX-6 200GbE"
+  - device_id: 0x101F
+    name: "ConnectX-6 DX 100GbE"
+  - device_id: 0x1021
+    name: "ConnectX-6 LX 25GbE"
+
+memory_map:
+  - name: BAR0
+    size: 0x100000  # 1 MB
+    type: mmio
+    description: "Initialization Segment"
+
+  - name: BAR2
+    size: 0x800000  # 8 MB
+    type: mmio
+    description: "UAR (User Access Region)"
+
+registers:
+  # Initialization Segment
+  - name: FW_REV
+    offset: 0x0000
+    size: 4
+    access: ro
+    description: "Firmware Revision"
+
+  - name: CMDIF_REV
+    offset: 0x0004
+    size: 4
+    access: ro
+    description: "Command Interface Revision"
+
+  - name: FW_REV_MINOR
+    offset: 0x0008
+    size: 4
+    access: ro
+
+  - name: CMDQ_PHY_ADDR_HI
+    offset: 0x0010
+    size: 4
+    access: rw
+    description: "Command Queue Physical Address High"
+
+  - name: CMDQ_PHY_ADDR_LO
+    offset: 0x0014
+    size: 4
+    access: rw
+    description: "Command Queue Physical Address Low"
+
+  - name: CMDQ_DOORBELL
+    offset: 0x0018
+    size: 4
+    access: rw
+    description: "Command Queue Doorbell"
+
+  - name: INIT_SEG_SIZE
+    offset: 0x001C
+    size: 4
+    access: ro
+
+  - name: HEALTH_BUFFER
+    offset: 0x0200
+    size: 4
+    access: ro
+    description: "Health Status Buffer"
+    array_size: 16
+
+  - name: HEALTH_COUNTER
+    offset: 0x0280
+    size: 4
+    access: ro
+
+  # Command interface
+  - name: CMD_TYPE
+    offset: 0x0000
+    size: 4
+    access: rw
+    description: "Command Type (in command mailbox)"
+
+  - name: CMD_INPUT_LEN
+    offset: 0x0004
+    size: 4
+    access: rw
+
+  - name: CMD_OUTPUT_LEN
+    offset: 0x0008
+    size: 4
+    access: rw
+
+  - name: CMD_TOKEN
+    offset: 0x000C
+    size: 4
+    access: rw
+
+  - name: CMD_SIGNATURE
+    offset: 0x0020
+    size: 4
+    access: rw
+
+  - name: CMD_STATUS
+    offset: 0x0024
+    size: 4
+    access: ro
+
+  # UAR registers (per Send Queue)
+  - name: SQ_DOORBELL
+    offset: 0x0800
+    size: 8
+    access: wo
+    description: "Send Queue Doorbell"
+    per_queue: true
+
+  - name: CQ_DOORBELL
+    offset: 0x0020
+    size: 8
+    access: wo
+    description: "Completion Queue Doorbell"
+    per_queue: true
+
+  - name: EQ_DOORBELL
+    offset: 0x0040
+    size: 8
+    access: wo
+    description: "Event Queue Doorbell"
+
+constants:
+  # Command opcodes
+  CMD_QUERY_HCA_CAP: 0x100
+  CMD_QUERY_ADAPTER: 0x101
+  CMD_INIT_HCA: 0x102
+  CMD_TEARDOWN_HCA: 0x103
+  CMD_ENABLE_HCA: 0x104
+  CMD_DISABLE_HCA: 0x105
+  CMD_QUERY_PAGES: 0x107
+  CMD_MANAGE_PAGES: 0x108
+  CMD_CREATE_EQ: 0x301
+  CMD_DESTROY_EQ: 0x302
+  CMD_CREATE_CQ: 0x400
+  CMD_DESTROY_CQ: 0x401
+  CMD_CREATE_QP: 0x500
+  CMD_DESTROY_QP: 0x501
+  CMD_RST2INIT_QP: 0x502
+  CMD_INIT2RTR_QP: 0x503
+  CMD_RTR2RTS_QP: 0x504
+  CMD_ALLOC_PD: 0x800
+  CMD_DEALLOC_PD: 0x801
+  CMD_ALLOC_UAR: 0x802
+  CMD_DEALLOC_UAR: 0x803
+
+  # QP states
+  QP_STATE_RST: 0
+  QP_STATE_INIT: 1
+  QP_STATE_RTR: 2
+  QP_STATE_RTS: 3
+  QP_STATE_SQD: 4
+  QP_STATE_SQE: 5
+  QP_STATE_ERR: 6
+
+init_sequence:
+  # Read firmware version
+  - read:
+      register: FW_REV
+      into: $fw_major
+  - read:
+      register: FW_REV_MINOR
+      into: $fw_minor
+
+  # Check health status
+  - read:
+      register: HEALTH_BUFFER[0]
+      into: $health
+
+  # Set up command queue
+  - write:
+      register: CMDQ_PHY_ADDR_HI
+      value: $cmdq_phys_high
+  - write:
+      register: CMDQ_PHY_ADDR_LO
+      value: $cmdq_phys_low
+
+  # Enable HCA
+  - call: cmd_send
+    params:
+      opcode: 0x104  # ENABLE_HCA
+
+  # Query capabilities
+  - call: cmd_send
+    params:
+      opcode: 0x100  # QUERY_HCA_CAP
+
+  # Initialize HCA
+  - call: cmd_send
+    params:
+      opcode: 0x102  # INIT_HCA
+
+  # Allocate UAR (User Access Region)
+  - call: cmd_send
+    params:
+      opcode: 0x802  # ALLOC_UAR
+
+  # Allocate Protection Domain
+  - call: cmd_send
+    params:
+      opcode: 0x800  # ALLOC_PD
+
+  # Create Event Queue for interrupts
+  - call: cmd_send
+    params:
+      opcode: 0x301  # CREATE_EQ
+
+  # Create Completion Queue
+  - call: cmd_send
+    params:
+      opcode: 0x400  # CREATE_CQ
+
+  # Create Queue Pair
+  - call: cmd_send
+    params:
+      opcode: 0x500  # CREATE_QP
+
+  # Transition QP: RST -> INIT -> RTR -> RTS
+  - call: cmd_send
+    params:
+      opcode: 0x502  # RST2INIT_QP
+  - call: cmd_send
+    params:
+      opcode: 0x503  # INIT2RTR_QP
+  - call: cmd_send
+    params:
+      opcode: 0x504  # RTR2RTS_QP
+
+operations:
+  - name: cmd_send
+    type: command_interface
+    description: "Send command to firmware"
+    params:
+      - opcode: u16
+    steps:
+      # Build command in mailbox
+      # Ring doorbell
+      - write:
+          register: CMDQ_DOORBELL
+          value: 0x01
+
+  - name: tx
+    type: send_queue
+    description: "Post send work request"
+    steps:
+      # Build WQE (Work Queue Element)
+      # Ring send queue doorbell
+      - write:
+          register: SQ_DOORBELL
+          value: $wqe_index
+
+  - name: rx_poll
+    type: completion_queue
+    description: "Poll completion queue"
+    returns:
+      - $cqe_opcode
+      - $byte_count
+    steps:
+      # Check CQ for completions
+      # Arm CQ for next notification
+
+  - name: rdma_read
+    type: rdma
+    description: "RDMA Read operation"
+    params:
+      - remote_addr: u64
+      - rkey: u32
+      - length: u32
+
+  - name: rdma_write
+    type: rdma
+    description: "RDMA Write operation"
+    params:
+      - remote_addr: u64
+      - rkey: u32
+      - length: u32
+
+interrupts:
+  type: msix
+  vectors: 256
+  event_queue: true
+  handlers:
+    - name: completion
+      action: process_cq
+    - name: async_event
+      action: handle_async
+
+features:
+  - rdma:
+      protocols: [roce_v1, roce_v2, infiniband]
+  - sr_iov:
+      max_vfs: 126
+  - rss:
+      max_queues: 256
+  - checksum_offload: [ipv4, tcp, udp]
+  - tso:
+      max_size: 65536
+  - lro: true
+  - ecn: true
+  - pfc: true  # Priority Flow Control
+  - nvgre_offload: true
+  - vxlan_offload: true
+  - geneve_offload: true
+  - gre_offload: true
+  - qos:
+      traffic_classes: 8
+  - timestamping:
+      precision_ns: 1

@@ -1,0 +1,217 @@
+# VirtIO Network Device
+# Standard paravirtualized NIC for VMs (QEMU/KVM, VirtualBox, etc.)
+# Reference: VirtIO 1.1 Specification
+
+device:
+  name: VirtIO-Net
+  class: network
+  version: "1.1"
+  vendor_id: 0x1AF4
+  device_id: 0x1000  # Legacy, 0x1041 for modern
+  description: "VirtIO paravirtualized network adapter"
+
+memory_map:
+  - name: DEVICE_FEATURES
+    offset: 0x00
+    size: 4
+    access: ro
+    description: "Device feature bits 0-31"
+  - name: DRIVER_FEATURES
+    offset: 0x04
+    size: 4
+    access: wo
+    description: "Driver feature bits 0-31"
+  - name: QUEUE_ADDRESS
+    offset: 0x08
+    size: 4
+    access: wo
+    description: "Queue PFN (page frame number)"
+  - name: QUEUE_SIZE
+    offset: 0x0C
+    size: 2
+    access: ro
+    description: "Queue size (number of entries)"
+  - name: QUEUE_SELECT
+    offset: 0x0E
+    size: 2
+    access: wo
+    description: "Queue selector"
+  - name: QUEUE_NOTIFY
+    offset: 0x10
+    size: 2
+    access: wo
+    description: "Queue notifier"
+  - name: DEVICE_STATUS
+    offset: 0x12
+    size: 1
+    access: rw
+    description: "Device status"
+  - name: ISR_STATUS
+    offset: 0x13
+    size: 1
+    access: ro
+    description: "Interrupt status"
+  - name: DEVICE_CONFIG
+    offset: 0x14
+    size: 6
+    access: ro
+    description: "MAC address"
+
+registers:
+  - name: MAC0
+    offset: 0x14
+    size: 4
+    access: ro
+    description: "MAC address bytes 0-3"
+  - name: MAC1
+    offset: 0x18
+    size: 2
+    access: ro
+    description: "MAC address bytes 4-5"
+  - name: STATUS
+    offset: 0x1A
+    size: 2
+    access: ro
+    description: "Link status"
+
+constants:
+  # Device status bits
+  ACKNOWLEDGE: 0x01
+  DRIVER: 0x02
+  DRIVER_OK: 0x04
+  FEATURES_OK: 0x08
+  DEVICE_NEEDS_RESET: 0x40
+  FAILED: 0x80
+
+  # Feature bits
+  VIRTIO_NET_F_CSUM: 0
+  VIRTIO_NET_F_GUEST_CSUM: 1
+  VIRTIO_NET_F_MAC: 5
+  VIRTIO_NET_F_GSO: 6
+  VIRTIO_NET_F_MRG_RXBUF: 15
+  VIRTIO_NET_F_STATUS: 16
+
+  # Queue indices
+  RX_QUEUE: 0
+  TX_QUEUE: 1
+  CTRL_QUEUE: 2
+
+init_sequence:
+  # Reset device
+  - write:
+      register: DEVICE_STATUS
+      value: 0x00
+  - wait_ms: 10
+
+  # Acknowledge device
+  - write:
+      register: DEVICE_STATUS
+      value: 0x01  # ACKNOWLEDGE
+
+  # Set DRIVER bit
+  - write:
+      register: DEVICE_STATUS
+      value: 0x03  # ACKNOWLEDGE | DRIVER
+
+  # Read and negotiate features
+  - read:
+      register: DEVICE_FEATURES
+      into: $features
+
+  # Accept common features (checksum, MAC, status)
+  - write:
+      register: DRIVER_FEATURES
+      value: 0x00010021  # CSUM | MAC | STATUS
+
+  # Set FEATURES_OK
+  - write:
+      register: DEVICE_STATUS
+      value: 0x0B  # ACKNOWLEDGE | DRIVER | FEATURES_OK
+
+  # Verify FEATURES_OK accepted
+  - read:
+      register: DEVICE_STATUS
+      into: $status
+  - if:
+      condition: "($status & 0x08) == 0"
+      then:
+        - fail: "Feature negotiation failed"
+
+  # Set up RX queue
+  - write:
+      register: QUEUE_SELECT
+      value: 0  # RX queue
+  - read:
+      register: QUEUE_SIZE
+      into: $rx_size
+
+  # Set up TX queue
+  - write:
+      register: QUEUE_SELECT
+      value: 1  # TX queue
+  - read:
+      register: QUEUE_SIZE
+      into: $tx_size
+
+  # Mark driver ready
+  - write:
+      register: DEVICE_STATUS
+      value: 0x0F  # ACKNOWLEDGE | DRIVER | FEATURES_OK | DRIVER_OK
+
+operations:
+  - name: tx
+    type: virtqueue_add
+    description: "Transmit packet via virtqueue"
+    steps:
+      - write:
+          register: QUEUE_SELECT
+          value: 1  # TX queue
+      # Add buffer to available ring (simplified)
+      - write:
+          register: QUEUE_NOTIFY
+          value: 1
+
+  - name: rx_poll
+    type: virtqueue_get
+    description: "Poll for received packets"
+    returns:
+      - $rx_len
+    steps:
+      - write:
+          register: QUEUE_SELECT
+          value: 0  # RX queue
+      - read:
+          register: ISR_STATUS
+          into: $isr
+      # Return packet length from used ring (simplified)
+
+  - name: read_mac
+    type: read
+    description: "Read MAC address"
+    returns:
+      - $mac_low
+      - $mac_high
+    steps:
+      - read:
+          register: MAC0
+          into: $mac_low
+      - read:
+          register: MAC1
+          into: $mac_high
+
+interrupts:
+  status_register: ISR_STATUS
+  handlers:
+    - name: rx_complete
+      mask: 0x01
+      action: process_rx
+    - name: config_change
+      mask: 0x02
+      action: handle_config
+
+quirks:
+  - name: legacy_mode
+    condition: "device_id == 0x1000"
+    description: "Legacy VirtIO device"
+    adjustments:
+      - use_legacy_registers: true

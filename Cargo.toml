@@ -1,0 +1,89 @@
+[workspace]
+resolver = "2"
+members = [
+    "axiom-types",
+    "axiom-codec",
+    "axiom-crypto",
+    "axiom-clock",
+    "axiom-router",
+    "axiom-transport",
+    "axiom-hal",
+    "axiom-runtime",
+    "axiom-audit",
+    "axiom-guardian",
+    "axiom-watcher",
+    "axiom-analyst",
+    "axiom-responder",
+    "axiom-gateway",
+    "forge-nic",
+    "ember",
+    "forge-node",
+]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2021"
+authors = ["Larry Roberts"]
+license = "MIT"
+repository = "https://github.com/larro1991/axiom-core"
+description = "AXIOM Protocol - AI-native networking"
+
+[workspace.dependencies]
+# Internal crates
+axiom-types = { path = "axiom-types" }
+axiom-codec = { path = "axiom-codec" }
+axiom-crypto = { path = "axiom-crypto" }
+axiom-clock = { path = "axiom-clock" }
+axiom-router = { path = "axiom-router" }
+axiom-transport = { path = "axiom-transport" }
+axiom-hal = { path = "axiom-hal" }
+axiom-runtime = { path = "axiom-runtime" }
+forge-nic = { path = "forge-nic" }
+ember = { path = "ember" }
+axiom-audit = { path = "axiom-audit" }
+axiom-guardian = { path = "axiom-guardian" }
+axiom-watcher = { path = "axiom-watcher" }
+axiom-analyst = { path = "axiom-analyst" }
+axiom-responder = { path = "axiom-responder" }
+axiom-gateway = { path = "axiom-gateway" }
+
+# Cryptography
+ed25519-dalek = { version = "2.1", features = ["rand_core"] }
+x25519-dalek = "2.0"
+blake3 = "1.5"
+chacha20poly1305 = "0.10"
+rand = "0.8"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+hex = "0.4"
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# Testing
+proptest = "1.4"
+criterion = "0.5"
+
+# no_std support
+hashbrown = "0.14"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.bench]
+lto = true

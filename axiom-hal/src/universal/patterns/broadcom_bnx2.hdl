@@ -1,0 +1,325 @@
+# Broadcom NetXtreme II (BCM5706/5708/5709)
+# Common server NIC, used in many Dell/HP servers
+# Reference: BCM5709 Programmer's Reference Guide
+
+device:
+  name: Broadcom-BNX2
+  class: network
+  version: "1.0"
+  vendor_id: 0x14E4
+  device_id: 0x164A  # BCM5709
+  description: "Broadcom NetXtreme II Gigabit Ethernet"
+
+variants:
+  - device_id: 0x164A
+    name: "BCM5709"
+  - device_id: 0x164C
+    name: "BCM5709S"
+  - device_id: 0x163B
+    name: "BCM5716"
+  - device_id: 0x163D
+    name: "BCM5716S"
+  - device_id: 0x1639
+    name: "BCM5709C"
+  - device_id: 0x163A
+    name: "BCM5709S"
+
+memory_map:
+  - name: BAR0
+    size: 0x8000
+    type: mmio
+    description: "Main register space"
+
+registers:
+  # Misc Host Control
+  - name: MISC_HOST_CTRL
+    offset: 0x0068
+    size: 4
+    access: rw
+    description: "Miscellaneous Host Control"
+    fields:
+      - name: ENABLE_ENDIAN_BYTE_SWAP
+        bit: 2
+      - name: ENABLE_ENDIAN_WORD_SWAP
+        bit: 3
+      - name: ENABLE_INDIRECT_ACCESS
+        bit: 7
+      - name: MASK_INTERRUPT_MODE
+        bit: 8
+      - name: ENABLE_TAGGED_STATUS_MODE
+        bit: 9
+
+  # PCI State
+  - name: PCI_STATE
+    offset: 0x0070
+    size: 4
+    access: rw
+
+  # Mailbox registers
+  - name: MBOX_INTERRUPT
+    offset: 0x0200
+    size: 4
+    access: rw
+    description: "Mailbox Interrupt"
+
+  - name: MBOX_RX_CONS0
+    offset: 0x0284
+    size: 4
+    access: rw
+    description: "RX Consumer Index 0"
+
+  - name: MBOX_TX_CONS0
+    offset: 0x0304
+    size: 4
+    access: rw
+    description: "TX Consumer Index 0"
+
+  # Status Block Host Address
+  - name: STATUS_BLK_HOST_ADDR_LO
+    offset: 0x3C38
+    size: 4
+    access: rw
+
+  - name: STATUS_BLK_HOST_ADDR_HI
+    offset: 0x3C3C
+    size: 4
+    access: rw
+
+  # Statistics Block Host Address
+  - name: STAT_BLK_HOST_ADDR_LO
+    offset: 0x3C40
+    size: 4
+    access: rw
+
+  - name: STAT_BLK_HOST_ADDR_HI
+    offset: 0x3C44
+    size: 4
+    access: rw
+
+  # DMA Configuration
+  - name: DMA_CFG
+    offset: 0x6C88
+    size: 4
+    access: rw
+
+  # Receive Configuration
+  - name: RX_MODE
+    offset: 0x3C00
+    size: 4
+    access: rw
+    fields:
+      - name: ENABLE
+        bit: 1
+      - name: PROMISCUOUS
+        bit: 8
+      - name: ACCEPT_RUNTS
+        bit: 10
+
+  # Transmit Configuration
+  - name: TX_MODE
+    offset: 0x45C0
+    size: 4
+    access: rw
+    fields:
+      - name: ENABLE
+        bit: 1
+      - name: BD_DMA_ENABLE
+        bit: 4
+      - name: LONG_PAUSE_ENABLE
+        bit: 6
+
+  # MAC Mode
+  - name: MAC_MODE
+    offset: 0x0400
+    size: 4
+    access: rw
+    fields:
+      - name: LINK_POLARITY
+        bit: 1
+      - name: PORT_MODE_NONE
+        bit: 2
+      - name: PORT_MODE_MII
+        bit: 3
+      - name: HALF_DUPLEX
+        bit: 1
+      - name: ENABLE_TDE
+        bit: 21
+      - name: ENABLE_RDE
+        bit: 22
+      - name: ENABLE_FHDE
+        bit: 23
+
+  # MAC Address
+  - name: MAC_ADDR1_LO
+    offset: 0x0410
+    size: 4
+    access: rw
+  - name: MAC_ADDR1_HI
+    offset: 0x0414
+    size: 4
+    access: rw
+
+  # Link Status
+  - name: MAC_STATUS
+    offset: 0x0404
+    size: 4
+    access: ro
+    fields:
+      - name: SIGNAL_DETECT
+        bit: 0
+      - name: LINK_STATE_CHANGED
+        bit: 12
+      - name: MI_COMPLETE
+        bit: 22
+
+  # Firmware Mailboxes
+  - name: FW_MBX
+    offset: 0x0120
+    size: 4
+    access: rw
+
+  - name: FW_MBX_ACK
+    offset: 0x0124
+    size: 4
+    access: rw
+
+  # Ring Producer Index
+  - name: RX_BD_PROD
+    offset: 0x0268
+    size: 4
+    access: rw
+
+  - name: TX_BD_PROD
+    offset: 0x0304
+    size: 4
+    access: rw
+
+  # Context registers (indirect access)
+  - name: CTX_DATA_ADR
+    offset: 0x1008
+    size: 4
+    access: rw
+
+  - name: CTX_DATA
+    offset: 0x100C
+    size: 4
+    access: rw
+
+constants:
+  # Firmware states
+  FW_STATE_OPENING: 0x00010000
+  FW_STATE_OPEN: 0x00020000
+  FW_STATE_CLOSING: 0x00030000
+  FW_STATE_CLOSED: 0x00040000
+
+  # DRV states (for firmware communication)
+  DRV_STATE_START: 0x00010000
+  DRV_STATE_UNLOAD: 0x00020000
+
+init_sequence:
+  # Enable byte/word swapping for big-endian compatibility
+  - read:
+      register: MISC_HOST_CTRL
+      into: $host_ctrl
+  - write:
+      register: MISC_HOST_CTRL
+      value: "($host_ctrl | 0x0C)"
+
+  # Enable memory-mapped access
+  - read:
+      register: PCI_STATE
+      into: $pci_state
+  - write:
+      register: PCI_STATE
+      value: "($pci_state | 0x01)"
+
+  # Reset the chip
+  - write:
+      register: MISC_HOST_CTRL
+      value: 0x02  # CORE_CLOCK_RESET
+  - wait_ms: 20
+
+  # Initialize firmware mailboxes
+  - write:
+      register: FW_MBX
+      value: 0x00010000  # DRV_STATE_START
+
+  # Wait for firmware ready
+  - poll:
+      register: FW_MBX_ACK
+      expected: 0x00020000
+      mask: 0xFFFF0000
+      timeout_ms: 5000
+
+  # Set up status block address
+  - write:
+      register: STATUS_BLK_HOST_ADDR_LO
+      value: $status_blk_phys_low
+  - write:
+      register: STATUS_BLK_HOST_ADDR_HI
+      value: $status_blk_phys_high
+
+  # Configure DMA
+  - write:
+      register: DMA_CFG
+      value: 0x000000FF  # Max burst
+
+  # Enable RX
+  - write:
+      register: RX_MODE
+      value: 0x02  # ENABLE
+
+  # Enable TX
+  - write:
+      register: TX_MODE
+      value: 0x12  # ENABLE | BD_DMA_ENABLE
+
+  # Enable MAC
+  - write:
+      register: MAC_MODE
+      value: 0x00E00000  # TDE | RDE | FHDE
+
+operations:
+  - name: tx
+    type: mailbox_ring
+    steps:
+      - read:
+          register: TX_BD_PROD
+          into: $prod
+      - increment:
+          variable: $prod
+          modulo: $tx_ring_size
+      - write:
+          register: TX_BD_PROD
+          value: $prod
+
+  - name: rx_poll
+    type: status_block
+    returns:
+      - $rx_len
+    steps:
+      - read:
+          register: MBOX_RX_CONS0
+          into: $cons
+      # Check status block for completed RX
+
+  - name: read_mac
+    type: read
+    returns:
+      - $mac_hi
+      - $mac_lo
+    steps:
+      - read:
+          register: MAC_ADDR1_HI
+          into: $mac_hi
+      - read:
+          register: MAC_ADDR1_LO
+          into: $mac_lo
+
+interrupts:
+  type: msi
+  status_register: MBOX_INTERRUPT
+  handlers:
+    - name: status_update
+      mask: 0x01
+      action: process_status_block

@@ -1,0 +1,309 @@
+# USB CDC-NCM (Network Control Model) / RNDIS
+# Common USB Ethernet adapters and phone tethering
+# Reference: USB CDC 1.2 Specification, NCM 1.0
+
+device:
+  name: USB-CDC-NCM
+  class: network
+  version: "1.0"
+  vendor_id: 0x0000  # Various
+  device_id: 0x0000
+  bus_type: usb
+  description: "USB CDC-NCM/ECM Ethernet Adapter"
+
+usb_class:
+  class: 0x02  # CDC
+  subclass: 0x0D  # NCM
+  protocol: 0x00
+
+variants:
+  # Common USB Ethernet chipsets
+  - vendor_id: 0x0B95
+    device_id: 0x1790
+    name: "ASIX AX88179"
+  - vendor_id: 0x0B95
+    device_id: 0x178A
+    name: "ASIX AX88178A"
+  - vendor_id: 0x2357
+    device_id: 0x0601
+    name: "TP-Link UE300"
+  - vendor_id: 0x0BDA
+    device_id: 0x8153
+    name: "Realtek RTL8153"
+  - vendor_id: 0x0BDA
+    device_id: 0x8152
+    name: "Realtek RTL8152"
+  - vendor_id: 0x17EF
+    device_id: 0x7205
+    name: "Lenovo USB-C Ethernet"
+  - vendor_id: 0x046D
+    device_id: 0xC0E5
+    name: "Logitech USB-C Ethernet"
+  # Android RNDIS (phone tethering)
+  - vendor_id: 0x18D1
+    device_id: 0x4EE3
+    name: "Google Pixel RNDIS"
+  # iPhone NCM
+  - vendor_id: 0x05AC
+    device_id: 0x12A8
+    name: "Apple iPhone NCM"
+
+endpoints:
+  - name: BULK_IN
+    type: bulk
+    direction: in
+    max_packet: 512
+    description: "Data IN (RX)"
+
+  - name: BULK_OUT
+    type: bulk
+    direction: out
+    max_packet: 512
+    description: "Data OUT (TX)"
+
+  - name: INTERRUPT_IN
+    type: interrupt
+    direction: in
+    max_packet: 16
+    interval_ms: 32
+    description: "Notifications"
+
+cdc_descriptors:
+  - type: header
+    bcdCDC: 0x0120
+
+  - type: union
+    bControlInterface: 0
+    bSubordinateInterface: 1
+
+  - type: ethernet_networking
+    iMACAddress: $mac_address_string
+    bmEthernetStatistics: 0x00000000
+    wMaxSegmentSize: 1514
+    wNumberMCFilters: 0x0000
+    bNumberPowerFilters: 0
+
+  - type: ncm
+    bcdNcmVersion: 0x0100
+    bmNetworkCapabilities: 0x1F
+
+control_requests:
+  # CDC Control Requests
+  - name: SET_ETHERNET_MULTICAST_FILTERS
+    bmRequestType: 0x21
+    bRequest: 0x40
+    wValue: 0
+    wIndex: $interface
+
+  - name: SET_ETHERNET_PM_PATTERN_FILTER
+    bmRequestType: 0x21
+    bRequest: 0x41
+
+  - name: GET_ETHERNET_PM_PATTERN_FILTER
+    bmRequestType: 0xA1
+    bRequest: 0x42
+
+  - name: SET_ETHERNET_PACKET_FILTER
+    bmRequestType: 0x21
+    bRequest: 0x43
+    wValue: $filter_bitmap
+    wIndex: $interface
+
+  - name: GET_ETHERNET_STATISTIC
+    bmRequestType: 0xA1
+    bRequest: 0x44
+
+  # NCM specific
+  - name: GET_NTB_PARAMETERS
+    bmRequestType: 0xA1
+    bRequest: 0x80
+    description: "Get NCM Transfer Block parameters"
+
+  - name: GET_NET_ADDRESS
+    bmRequestType: 0xA1
+    bRequest: 0x81
+    description: "Get MAC address"
+
+  - name: SET_NET_ADDRESS
+    bmRequestType: 0x21
+    bRequest: 0x82
+    description: "Set MAC address"
+
+  - name: GET_NTB_FORMAT
+    bmRequestType: 0xA1
+    bRequest: 0x83
+
+  - name: SET_NTB_FORMAT
+    bmRequestType: 0x21
+    bRequest: 0x84
+
+  - name: GET_NTB_INPUT_SIZE
+    bmRequestType: 0xA1
+    bRequest: 0x85
+
+  - name: SET_NTB_INPUT_SIZE
+    bmRequestType: 0x21
+    bRequest: 0x86
+
+  - name: GET_MAX_DATAGRAM_SIZE
+    bmRequestType: 0xA1
+    bRequest: 0x87
+
+  - name: SET_MAX_DATAGRAM_SIZE
+    bmRequestType: 0x21
+    bRequest: 0x88
+
+  - name: GET_CRC_MODE
+    bmRequestType: 0xA1
+    bRequest: 0x89
+
+  - name: SET_CRC_MODE
+    bmRequestType: 0x21
+    bRequest: 0x8A
+
+notifications:
+  - name: NETWORK_CONNECTION
+    bNotification: 0x00
+    description: "Link up/down notification"
+
+  - name: RESPONSE_AVAILABLE
+    bNotification: 0x01
+
+  - name: CONNECTION_SPEED_CHANGE
+    bNotification: 0x2A
+    description: "Speed change notification"
+
+constants:
+  # Packet filter bits
+  PACKET_TYPE_PROMISCUOUS: 0x0001
+  PACKET_TYPE_ALL_MULTICAST: 0x0002
+  PACKET_TYPE_DIRECTED: 0x0004
+  PACKET_TYPE_BROADCAST: 0x0008
+  PACKET_TYPE_MULTICAST: 0x0010
+
+  # NTB format
+  NTB_FORMAT_16: 0
+  NTB_FORMAT_32: 1
+
+  # NCM header signature
+  NCM_NTH16_SIG: 0x484D434E  # "NCMH"
+  NCM_NDP16_SIG: 0x304D434E  # "NCM0"
+
+init_sequence:
+  # Get device descriptors
+  - usb_get_descriptor:
+      type: device
+
+  - usb_get_descriptor:
+      type: config
+
+  # Set configuration
+  - usb_set_configuration:
+      config: 1
+
+  # Get NCM parameters
+  - usb_control:
+      request: GET_NTB_PARAMETERS
+      into: $ntb_params
+
+  # Get MAC address
+  - usb_control:
+      request: GET_NET_ADDRESS
+      into: $mac_address
+
+  # Set NTB input size (for aggregation)
+  - usb_control:
+      request: SET_NTB_INPUT_SIZE
+      value: 16384
+
+  # Set packet filter (accept directed, broadcast, multicast)
+  - usb_control:
+      request: SET_ETHERNET_PACKET_FILTER
+      value: 0x001C
+
+  # Set interface to data mode
+  - usb_set_interface:
+      interface: 1
+      alt_setting: 1
+
+  # Start interrupt polling for notifications
+  - usb_submit_urb:
+      endpoint: INTERRUPT_IN
+
+operations:
+  - name: tx
+    type: usb_bulk
+    description: "Transmit packet via NCM"
+    steps:
+      # Build NCM Transfer Block (NTB)
+      # - NTH16: Header with signature, length, sequence
+      # - NDP16: Datagram pointer table
+      # - Datagrams
+      - usb_submit_urb:
+          endpoint: BULK_OUT
+          data: $ntb
+
+  - name: rx
+    type: usb_bulk
+    description: "Receive NCM transfer block"
+    returns:
+      - $datagrams
+    steps:
+      - usb_submit_urb:
+          endpoint: BULK_IN
+      # Parse NTB, extract datagrams
+
+  - name: read_mac
+    type: usb_control
+    returns:
+      - $mac_bytes
+    steps:
+      - usb_control:
+          request: GET_NET_ADDRESS
+          into: $mac_bytes
+
+  - name: set_promiscuous
+    type: usb_control
+    params:
+      - enable: bool
+    steps:
+      - if:
+          condition: "$enable"
+          then:
+            - usb_control:
+                request: SET_ETHERNET_PACKET_FILTER
+                value: 0x001F  # + PROMISCUOUS
+          else:
+            - usb_control:
+                request: SET_ETHERNET_PACKET_FILTER
+                value: 0x001C
+
+interrupts:
+  type: usb_interrupt
+  endpoint: INTERRUPT_IN
+  handlers:
+    - name: link_change
+      notification: NETWORK_CONNECTION
+      action: handle_link
+    - name: speed_change
+      notification: CONNECTION_SPEED_CHANGE
+      action: update_speed
+
+quirks:
+  - name: realtek_rtl8153
+    condition: "vendor_id == 0x0BDA && device_id == 0x8153"
+    description: "RTL8153 needs vendor-specific init"
+    adjustments:
+      - realtek_init: true
+
+  - name: asix_ax88179
+    condition: "vendor_id == 0x0B95 && device_id == 0x1790"
+    description: "ASIX AX88179 uses custom protocol"
+    adjustments:
+      - asix_protocol: true
+
+features:
+  - max_speed: 1000  # Mbps (USB 3.0 limit)
+  - aggregation: true
+  - checksum_offload: [ipv4, tcp, udp]  # Device dependent
+  - wake_on_lan: true

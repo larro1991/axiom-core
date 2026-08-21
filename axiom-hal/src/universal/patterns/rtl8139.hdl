@@ -1,0 +1,161 @@
+# RTL8139 Fast Ethernet Controller
+# Reference: RTL8139 Programming Guide
+
+device:
+  name: "RTL8139"
+  vendor_id: 0x10EC
+  device_id: 0x8139
+  class: network
+
+memory_map:
+  bar0:
+    size: 256
+    registers:
+      - name: IDR0
+        offset: 0x00
+        width: 32
+        access: read_write
+      - name: IDR4
+        offset: 0x04
+        width: 16
+        access: read_write
+      - name: MAR0
+        offset: 0x08
+        width: 32
+        access: read_write
+      - name: MAR4
+        offset: 0x0C
+        width: 32
+        access: read_write
+      - name: TSD0
+        offset: 0x10
+        width: 32
+        access: read_write
+        array: 4
+      - name: TSAD0
+        offset: 0x20
+        width: 32
+        access: read_write
+        array: 4
+      - name: RBSTART
+        offset: 0x30
+        width: 32
+        access: read_write
+      - name: ERBCR
+        offset: 0x34
+        width: 16
+        access: read_only
+      - name: ERSR
+        offset: 0x36
+        width: 8
+        access: read_write
+      - name: CMD
+        offset: 0x37
+        width: 8
+        access: read_write
+      - name: CAPR
+        offset: 0x38
+        width: 16
+        access: read_write
+      - name: CBR
+        offset: 0x3A
+        width: 16
+        access: read_only
+      - name: IMR
+        offset: 0x3C
+        width: 16
+        access: read_write
+      - name: ISR
+        offset: 0x3E
+        width: 16
+        access: read_write
+      - name: TCR
+        offset: 0x40
+        width: 32
+        access: read_write
+      - name: RCR
+        offset: 0x44
+        width: 32
+        access: read_write
+      - name: MPC
+        offset: 0x4C
+        width: 32
+        access: read_only
+      - name: CONFIG0
+        offset: 0x51
+        width: 8
+        access: read_write
+      - name: CONFIG1
+        offset: 0x52
+        width: 8
+        access: read_write
+
+interrupts:
+  type: legacy
+  handlers:
+    - mask: 0x0001
+      name: rx_ok
+      action: signal_rx_ready
+    - mask: 0x0002
+      name: rx_err
+      action: signal_error
+    - mask: 0x0004
+      name: tx_ok
+      action: signal_tx_done
+    - mask: 0x0008
+      name: tx_err
+      action: signal_error
+    - mask: 0x0010
+      name: rx_overflow
+      action: signal_error
+
+init_sequence:
+  - write: CMD, 0x10
+  - wait_ms: 10
+  - poll: CMD, 0, timeout: 100ms
+  - write: IMR, 0x0000
+  - write: TCR, 0x03000700
+  - write: RCR, 0x0000F00A
+  - write: CONFIG1, 0x00
+
+operations:
+  reset:
+    steps:
+      - write: CMD, 0x10
+      - wait_ms: 10
+      - poll: CMD, 0, timeout: 100ms
+
+  enable:
+    steps:
+      - read: CMD -> cmd_val
+      - write: CMD, 0x0C
+
+  disable:
+    steps:
+      - write: CMD, 0x00
+
+  set_rx_buffer:
+    params: [buffer_addr]
+    steps:
+      - write: RBSTART, $0
+      - write: CAPR, 0xFFF0
+
+  send_packet:
+    params: [buffer_addr, length]
+    steps:
+      - write: TSAD0, $0
+      - write: TSD0, $1
+      - increment: tx_index, mod: 4
+
+  enable_interrupts:
+    steps:
+      - write: IMR, 0x001F
+
+  disable_interrupts:
+    steps:
+      - write: IMR, 0x0000
+
+  acknowledge_interrupt:
+    params: [status]
+    steps:
+      - write: ISR, $0

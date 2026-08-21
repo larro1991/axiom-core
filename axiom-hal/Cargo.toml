@@ -1,0 +1,19 @@
+[package]
+name = "axiom-hal"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "AI-native hardware abstraction - resources as capabilities"
+
+[features]
+default = ["std"]
+std = ["axiom-types/std"]
+
+[dependencies]
+axiom-types = { workspace = true }
+hashbrown = { workspace = true }
+blake3 = { workspace = true }
+ed25519-dalek = { workspace = true }
+[dev-dependencies]
+rand = "0.8"

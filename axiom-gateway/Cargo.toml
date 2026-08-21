@@ -1,0 +1,60 @@
+[package]
+name = "axiom-gateway"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "AXIOM capability-gateway policy engine - versioned, fail-closed access control for capability dispatch. Standalone (no dependency on AXIOM's own discovery/transport/frame code) so it can be embedded by other consumers, e.g. Conduit's Burr Phase 2 - see DECISIONS.md."
+
+[features]
+# Exposes CapabilityPolicy::for_test (an in-memory, no-TOML-file policy
+# constructor) across crate boundaries - #[cfg(test)] alone only applies
+# when THIS crate itself is compiled in test mode, not when a downstream
+# crate (forge-node) compiles ITS OWN tests against axiom-gateway as a
+# normal (non-test) dependency. Same pattern as axiom-transport's
+# `test-utils` feature (see axiom-transport/Cargo.toml) - only forge-node's
+# [dev-dependencies] should ever enable this.
+#
+# AXIOM Phase 3.3: also gates `approval::MockDestructiveCapability` and
+# `Tier2ApprovalFlow::tamper_parameters_for_test` - same cross-crate-test
+# rationale, so forge-node's own future Tier 2 rehearsal tests can use the
+# mock capability without it being reachable from non-test production code.
+test-utils = []
+
+[dependencies]
+axiom-types = { workspace = true }
+# AXIOM Phase 3.3: `approval` module reuses IntentHasher (BLAKE3 intent
+# hashing, see axiom-crypto/src/hash.rs) for parameter-hash binding rather
+# than inventing a second hashing scheme - promoted from [dev-dependencies]
+# (where it was test-only, for Keypair::generate() in this crate's own unit
+# tests) to a real dependency now that non-test code uses it too. No
+# circular dependency risk: axiom-crypto depends only on axiom-types/
+# axiom-codec and crypto primitives, never on axiom-gateway.
+axiom-crypto = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+toml = { workspace = true }
+hex = { workspace = true }
+tracing = { workspace = true }
+# AXIOM Phase 3.4: `audit` module stores the hash-chained audit log as
+# JSON Lines (one JSON object per entry) - a line-oriented format makes
+# both "append one entry" and "detect a truncated/corrupt tail line"
+# trivial, unlike a single growing TOML/JSON document. Not a new external
+# dependency to the WORKSPACE - `forge-node` already pins `serde_json =
+# "1.0"` (see its own Cargo.toml) - this is its first use inside
+# axiom-gateway specifically, same "already-used-elsewhere, just newly
+# needed here" precedent as `rand` above.
+serde_json = "1.0"
+# AXIOM Phase 3.3: IntentId::generate() needs real randomness for one-time
+# intent IDs (deliberately NOT content-addressed - see IntentId's doc
+# comment in approval.rs). Already a workspace-pinned dependency used
+# elsewhere (axiom-crypto, etc.); this is its first use inside
+# axiom-gateway specifically.
+rand = { workspace = true }
+# Only the `sync` feature (Semaphore/OwnedSemaphorePermit) - this crate is
+# meant to be embeddable outside forge-node's own binary (see description
+# above), so it shouldn't drag in tokio's full runtime/net/fs stack just to
+# get a semaphore. Pinned to the same version the rest of the workspace
+# uses rather than `workspace = true`, since the workspace entry carries
+# the `full` feature set forge-node itself needs.
+tokio = { version = "1.35", features = ["sync"] }

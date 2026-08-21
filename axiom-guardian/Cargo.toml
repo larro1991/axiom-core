@@ -1,0 +1,22 @@
+[package]
+name = "axiom-guardian"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Network Guardian - Layer 2 attack detection and defense for legacy and hybrid networks"
+
+[features]
+default = ["std"]
+std = ["axiom-types/std", "axiom-audit/std"]
+active-defense = []  # Enable active countermeasures (ARP correction, etc.)
+
+[dependencies]
+axiom-types = { workspace = true }
+axiom-audit = { path = "../axiom-audit" }
+hashbrown = { workspace = true }
+thiserror = { workspace = true }
+blake3 = { workspace = true }
+hex = { version = "0.4", default-features = false, features = ["alloc"] }
+hmac = "0.12"
+sha2 = "0.10"

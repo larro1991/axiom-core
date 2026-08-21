@@ -1,0 +1,18 @@
+[package]
+name = "axiom-tests"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Integration tests for AXIOM stack"
+
+[dependencies]
+axiom-types = { workspace = true }
+axiom-codec = { workspace = true }
+axiom-crypto = { workspace = true }
+axiom-clock = { workspace = true }
+axiom-router = { workspace = true }
+axiom-transport = { workspace = true }
+axiom-hal = { workspace = true }
+axiom-runtime = { workspace = true }
+tokio = { workspace = true }

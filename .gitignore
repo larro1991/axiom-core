@@ -1,0 +1,5 @@
+/target/
+**/target/
+*.log
+node.key
+node.pub

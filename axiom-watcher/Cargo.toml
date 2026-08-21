@@ -1,0 +1,17 @@
+[package]
+name = "axiom-watcher"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "AXIOM Watcher - Layer 3-7 traffic analysis and behavioral monitoring"
+
+[features]
+default = ["std"]
+std = ["axiom-types/std", "axiom-guardian/std"]
+
+[dependencies]
+axiom-types = { workspace = true }
+axiom-guardian = { workspace = true }
+hashbrown = { workspace = true }
+thiserror = { workspace = true }

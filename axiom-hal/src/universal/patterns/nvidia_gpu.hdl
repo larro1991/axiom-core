@@ -1,0 +1,220 @@
+// NVIDIA GPU - Universal Driver HDL-Lite
+// GPU compute and display controller
+
+device nvidia_gpu {
+    name: "NVIDIA GPU"
+    class: gpu
+    bus: pcie
+
+    match {
+        // GeForce RTX 40 Series
+        { vendor: 0x10DE, device: 0x2684 }  // RTX 4090
+        { vendor: 0x10DE, device: 0x2704 }  // RTX 4080
+        { vendor: 0x10DE, device: 0x2782 }  // RTX 4070 Ti
+        { vendor: 0x10DE, device: 0x2786 }  // RTX 4070
+        { vendor: 0x10DE, device: 0x2860 }  // RTX 4060 Ti
+        { vendor: 0x10DE, device: 0x2882 }  // RTX 4060
+
+        // GeForce RTX 30 Series
+        { vendor: 0x10DE, device: 0x2204 }  // RTX 3090
+        { vendor: 0x10DE, device: 0x2206 }  // RTX 3080
+        { vendor: 0x10DE, device: 0x2208 }  // RTX 3080 Ti
+        { vendor: 0x10DE, device: 0x2484 }  // RTX 3070
+        { vendor: 0x10DE, device: 0x2488 }  // RTX 3070 Ti
+        { vendor: 0x10DE, device: 0x2503 }  // RTX 3060
+        { vendor: 0x10DE, device: 0x2504 }  // RTX 3060 Ti
+
+        // GeForce RTX 20 Series
+        { vendor: 0x10DE, device: 0x1E04 }  // RTX 2080 Ti
+        { vendor: 0x10DE, device: 0x1E07 }  // RTX 2080
+        { vendor: 0x10DE, device: 0x1E84 }  // RTX 2070
+        { vendor: 0x10DE, device: 0x1F02 }  // RTX 2060
+
+        // Datacenter GPUs
+        { vendor: 0x10DE, device: 0x20B0 }  // A100-SXM4-40GB
+        { vendor: 0x10DE, device: 0x20B2 }  // A100-SXM4-80GB
+        { vendor: 0x10DE, device: 0x20B5 }  // A100-PCIE-40GB
+        { vendor: 0x10DE, device: 0x20F1 }  // A100-PCIE-80GB
+        { vendor: 0x10DE, device: 0x2330 }  // H100-SXM5-80GB
+        { vendor: 0x10DE, device: 0x2331 }  // H100-PCIE-80GB
+        { vendor: 0x10DE, device: 0x26B5 }  // L40
+        { vendor: 0x10DE, device: 0x2236 }  // A10
+        { vendor: 0x10DE, device: 0x25B6 }  // A16
+
+        // Quadro / RTX Professional
+        { vendor: 0x10DE, device: 0x2230 }  // RTX A6000
+        { vendor: 0x10DE, device: 0x2231 }  // RTX A5000
+        { vendor: 0x10DE, device: 0x2232 }  // RTX A4500
+        { vendor: 0x10DE, device: 0x25B0 }  // RTX A4000
+
+        // Generic NVIDIA VGA
+        { vendor: 0x10DE, class: 0x030000 }  // VGA compatible
+        { vendor: 0x10DE, class: 0x030200 }  // 3D controller
+    }
+
+    // BAR0 - MMIO Registers
+    registers(bar: 0) {
+        // Boot/Early init
+        BOOT0     @ 0x00000000 : u32  // Boot information
+
+        // PMC - Power Management Controller
+        PMC_BOOT_0    @ 0x00000000 : u32
+        PMC_ENABLE    @ 0x00000200 : u32
+        PMC_INTR_0    @ 0x00000100 : u32
+        PMC_INTR_EN_0 @ 0x00000140 : u32
+
+        // PBUS
+        PBUS_PCI_NV_0 @ 0x00001800 : u32
+
+        // PTIMER - Programmable Timer
+        PTIMER_TIME_0 @ 0x00009400 : u32
+        PTIMER_TIME_1 @ 0x00009410 : u32
+
+        // PFB - Framebuffer controller
+        PFB_CFG0      @ 0x00100200 : u32  // Memory config
+
+        // PFIFO - DMA FIFO engine
+        PFIFO_INTR_0  @ 0x00002100 : u32
+        PFIFO_INTR_EN_0 @ 0x00002140 : u32
+
+        // PGRAPH - Graphics engine
+        PGRAPH_INTR   @ 0x00400100 : u32
+        PGRAPH_STATUS @ 0x00400700 : u32
+
+        // PCOPY - Copy engine
+        PCOPY_INTR    @ 0x00104100 : u32
+
+        // NVENC - Video encoder
+        // NVDEC - Video decoder
+        // Addresses vary by GPU generation
+    }
+
+    // BAR1 - VRAM aperture (framebuffer)
+    memory(bar: 1) {
+        framebuffer @ 0x00000000  // Direct VRAM access
+    }
+
+    // BAR3 - RAMIN (instance memory)
+
+    // GPU info structure (read from VBIOS/device)
+    struct gpu_info {
+        sm_count       : u32    // Streaming multiprocessor count
+        memory_size_mb : u32    // VRAM size
+        memory_bus_width: u32   // Memory bus width bits
+        compute_cap_major: u8   // Compute capability major
+        compute_cap_minor: u8   // Compute capability minor
+        max_threads_per_sm: u32
+        max_warps_per_sm: u32
+        tensor_cores: u32       // Tensor core count (0 if none)
+    }
+
+    // Command buffer submission
+    struct pushbuffer_entry {
+        method    : u32     // Method/register offset
+        data      : u32     // Data to write
+    }
+
+    // GPU classes (engines)
+    const CLASS_COMPUTE_A      = 0xC0C0  // Compute (varies by arch)
+    const CLASS_COMPUTE_B      = 0xC1C0
+    const CLASS_2D             = 0x902D
+    const CLASS_3D             = 0xB197
+    const CLASS_COPY_A         = 0xB0B5  // DMA copy engine
+    const CLASS_COPY_B         = 0xC0B5
+    const CLASS_INLINE_TO_MEM  = 0xA140
+
+    operations {
+        init {
+            // Read boot config
+            let boot0 = read(BOOT0)
+            let chipset = (boot0 >> 20) & 0x1FF
+
+            // Enable PMC
+            write(PMC_ENABLE, 0xFFFFFFFF)
+
+            // Initialize PFIFO
+            write(PFIFO_INTR_EN_0, 0)
+
+            // Probe VRAM size from PFB
+            let fb_cfg = read(PFB_CFG0)
+            let vram_size = decode_vram_size(fb_cfg)
+        }
+
+        create_channel(vm_addr: u64, pushbuffer_addr: u64, size: u32) {
+            // Allocate channel object in RAMIN
+            // Set up pushbuffer ring
+            // Configure channel MMIO aperture
+            // Return channel handle
+        }
+
+        submit_commands(channel: u32, pushbuffer: u64, size: u32) {
+            // Write pushbuffer address to channel doorbell
+            // Kick the PFIFO
+        }
+
+        // Memory operations
+        alloc_vram(size: u64, flags: u32) -> u64 {
+            // Allocate from VRAM heap
+            // Return GPU virtual address
+        }
+
+        map_to_gpu(cpu_addr: u64, size: u64) -> u64 {
+            // Create GPU page table entry
+            // Return GPU virtual address
+        }
+
+        // DMA operations
+        dma_copy(src: u64, dst: u64, size: u64, direction: u8) {
+            // Use PCOPY engine
+            // Setup scatter-gather if needed
+        }
+
+        // Compute operations
+        launch_kernel(
+            function_addr: u64,
+            grid_x: u32, grid_y: u32, grid_z: u32,
+            block_x: u32, block_y: u32, block_z: u32,
+            shared_mem: u32,
+            params: u64
+        ) {
+            // Build compute command buffer
+            // Submit to compute class
+        }
+
+        // Power management
+        get_power_state() -> u8 {
+            // Read current P-state
+        }
+
+        set_power_state(pstate: u8) {
+            // Request P-state change
+        }
+    }
+
+    features {
+        compute_capability: variable  // Depends on GPU
+        max_threads_per_block: 1024
+        max_shared_memory_per_block: 48KB  // Varies by arch
+        warp_size: 32
+        supports_unified_memory: true
+        supports_tensor_cores: variable
+        supports_nvlink: variable
+        supports_mig: variable  // Multi-Instance GPU (A100+)
+    }
+
+    power {
+        tdp: variable           // 75W to 700W
+        supports_power_limit: true
+        supports_clock_control: true
+    }
+
+    // Performance counters
+    counters {
+        sm_active: "SM Active Cycles"
+        memory_read_bytes: "VRAM Read Bandwidth"
+        memory_write_bytes: "VRAM Write Bandwidth"
+        tensor_active: "Tensor Core Utilization"
+        pcie_read_bytes: "PCIe Read Bandwidth"
+        pcie_write_bytes: "PCIe Write Bandwidth"
+    }
+}

@@ -1,0 +1,18 @@
+[package]
+name = "axiom-responder"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "AXIOM Responder - Automated incident response and remediation"
+
+[features]
+default = ["std"]
+std = ["axiom-types/std", "axiom-guardian/std", "axiom-analyst/std"]
+
+[dependencies]
+axiom-types = { workspace = true }
+axiom-guardian = { workspace = true }
+axiom-analyst = { workspace = true }
+hashbrown = { workspace = true }
+thiserror = { workspace = true }

@@ -1,0 +1,353 @@
+# Qualcomm Atheros Ethernet Controllers
+# Common in laptops and consumer devices
+# Reference: AR8151/AR8161 Datasheet
+
+device:
+  name: Qualcomm-Atheros
+  class: network
+  version: "1.0"
+  vendor_id: 0x1969
+  device_id: 0x1091  # AR8161
+  description: "Qualcomm Atheros Gigabit Ethernet"
+
+variants:
+  # Killer branded (same hardware)
+  - device_id: 0x1091
+    name: "AR8161 / Killer E2200"
+  - device_id: 0xE091
+    name: "Killer E2200"
+  - device_id: 0x10A1
+    name: "AR8162 / QCA8162"
+  - device_id: 0xE0A1
+    name: "Killer E2201"
+  - device_id: 0x1090
+    name: "AR8132"
+  - device_id: 0x10B0
+    name: "AR8151 v1.0"
+  - device_id: 0x10B1
+    name: "AR8151 v2.0"
+  - device_id: 0x10C0
+    name: "AR8132"
+  - device_id: 0x10C1
+    name: "AR8152 v1.1"
+  - device_id: 0x2060
+    name: "AR8152 v2.0"
+  - device_id: 0x2062
+    name: "AR8152 v2.1"
+  - device_id: 0x1083
+    name: "GbE Ethernet"
+  - device_id: 0xC0B1
+    name: "Killer E2400"
+  - device_id: 0xC0B2
+    name: "Killer E2500"
+
+memory_map:
+  - name: BAR0
+    size: 0x40000
+    type: mmio
+    description: "Main register space"
+
+registers:
+  # Device Control
+  - name: MASTER_CTRL
+    offset: 0x1400
+    size: 4
+    access: rw
+    description: "Master Control"
+    fields:
+      - name: SOFT_RST
+        bit: 0
+      - name: MTIMER_EN
+        bit: 1
+      - name: ITIMER_EN
+        bit: 2
+      - name: INT_RDCLR
+        bit: 14
+
+  # MAC Control
+  - name: MAC_CTRL
+    offset: 0x1480
+    size: 4
+    access: rw
+    fields:
+      - name: TX_EN
+        bit: 0
+      - name: RX_EN
+        bit: 1
+      - name: TX_FC_EN
+        bit: 2
+      - name: RX_FC_EN
+        bit: 3
+      - name: LOOPBACK
+        bit: 4
+      - name: FULL_DUPLEX
+        bit: 5
+      - name: ADD_CRC
+        bit: 6
+      - name: PAD
+        bit: 7
+      - name: PRMLEN_MASK
+        bits: [11, 10]
+      - name: HUGE_FRAME
+        bit: 12
+      - name: SPEED_MASK
+        bits: [14, 13]
+      - name: BROADCAST_EN
+        bit: 26
+      - name: MULTICAST_EN
+        bit: 27
+      - name: PROMISC_EN
+        bit: 15
+
+  # MAC Address
+  - name: MAC_STA_ADDR0
+    offset: 0x1488
+    size: 4
+    access: rw
+    description: "MAC Address Low"
+
+  - name: MAC_STA_ADDR1
+    offset: 0x148C
+    size: 2
+    access: rw
+    description: "MAC Address High"
+
+  # Interrupt Status
+  - name: ISR
+    offset: 0x1600
+    size: 4
+    access: rw
+    description: "Interrupt Status"
+
+  # Interrupt Mask
+  - name: IMR
+    offset: 0x1604
+    size: 4
+    access: rw
+    description: "Interrupt Mask"
+
+  # RX Base Address
+  - name: RXQ0_BASE_ADDR_LO
+    offset: 0x1540
+    size: 4
+    access: rw
+
+  - name: RXQ0_BASE_ADDR_HI
+    offset: 0x1544
+    size: 4
+    access: rw
+
+  # TX Base Address
+  - name: TXQ_BASE_ADDR_LO
+    offset: 0x1588
+    size: 4
+    access: rw
+
+  - name: TXQ_BASE_ADDR_HI
+    offset: 0x158C
+    size: 4
+    access: rw
+
+  # Ring Sizes
+  - name: RXQ0_NUM_ENTRIES
+    offset: 0x1548
+    size: 4
+    access: rw
+
+  - name: TXQ_NUM_ENTRIES
+    offset: 0x1590
+    size: 4
+    access: rw
+
+  # Consumer/Producer indices
+  - name: RXQ0_CONS_IDX
+    offset: 0x15A4
+    size: 4
+    access: rw
+
+  - name: TXQ_PROD_IDX
+    offset: 0x15F0
+    size: 4
+    access: rw
+
+  # PHY registers (MDIO)
+  - name: MDIO_CTRL
+    offset: 0x1414
+    size: 4
+    access: rw
+
+  - name: MDIO_DATA
+    offset: 0x1418
+    size: 4
+    access: rw
+
+  # PHY Status
+  - name: PHY_STATUS
+    offset: 0x140C
+    size: 4
+    access: ro
+    fields:
+      - name: SPEED_10
+        bit: 0
+      - name: SPEED_100
+        bit: 1
+      - name: SPEED_1000
+        bit: 2
+      - name: FULL_DUPLEX
+        bit: 3
+      - name: LINK_UP
+        bit: 4
+
+  # Checksum offload
+  - name: RXQ_CTRL
+    offset: 0x15A0
+    size: 4
+    access: rw
+
+  - name: TXQ_CTRL
+    offset: 0x1580
+    size: 4
+    access: rw
+
+constants:
+  # Interrupt bits
+  INT_GPHY: 0x00001000
+  INT_LINK_CHG: 0x00000080
+  INT_TX: 0x00000001
+  INT_RX: 0x00010000
+  INT_RX_PKT: 0x00000004
+  INT_PHY_LINK_DOWN: 0x00000040
+
+init_sequence:
+  # Software reset
+  - write:
+      register: MASTER_CTRL
+      value: 0x01
+  - wait_ms: 10
+
+  # Wait for reset complete
+  - poll:
+      register: MASTER_CTRL
+      expected: 0x00
+      mask: 0x01
+      timeout_ms: 1000
+
+  # Disable interrupts
+  - write:
+      register: IMR
+      value: 0x00000000
+
+  # Clear pending interrupts
+  - read:
+      register: ISR
+      into: $isr_clear
+
+  # Read MAC address from EEPROM area
+  - call: read_mac
+
+  # Set up RX ring
+  - write:
+      register: RXQ0_BASE_ADDR_LO
+      value: $rx_ring_phys_low
+  - write:
+      register: RXQ0_BASE_ADDR_HI
+      value: $rx_ring_phys_high
+  - write:
+      register: RXQ0_NUM_ENTRIES
+      value: $rx_ring_entries
+
+  # Set up TX ring
+  - write:
+      register: TXQ_BASE_ADDR_LO
+      value: $tx_ring_phys_low
+  - write:
+      register: TXQ_BASE_ADDR_HI
+      value: $tx_ring_phys_high
+  - write:
+      register: TXQ_NUM_ENTRIES
+      value: $tx_ring_entries
+
+  # Enable MAC
+  - write:
+      register: MAC_CTRL
+      value: 0x0C000063  # TX_EN | RX_EN | FULL_DUPLEX | ADD_CRC | PAD | BC_EN | MC_EN
+
+  # Enable interrupts
+  - write:
+      register: IMR
+      value: 0x000100C5
+
+operations:
+  - name: tx
+    type: descriptor_ring
+    steps:
+      - read:
+          register: TXQ_PROD_IDX
+          into: $prod
+      - increment:
+          variable: $prod
+          modulo: $tx_ring_entries
+      - write:
+          register: TXQ_PROD_IDX
+          value: $prod
+
+  - name: rx_poll
+    type: descriptor_ring
+    returns:
+      - $rx_len
+    steps:
+      - read:
+          register: RXQ0_CONS_IDX
+          into: $cons
+
+  - name: read_mac
+    type: read
+    returns:
+      - $mac_low
+      - $mac_high
+    steps:
+      - read:
+          register: MAC_STA_ADDR0
+          into: $mac_low
+      - read:
+          register: MAC_STA_ADDR1
+          into: $mac_high
+
+  - name: get_link_status
+    type: read
+    returns:
+      - $link_up
+      - $speed
+    steps:
+      - read:
+          register: PHY_STATUS
+          into: $status
+      - extract:
+          from: $status
+          high_bit: 4
+          low_bit: 4
+          into: $link_up
+      - extract:
+          from: $status
+          high_bit: 2
+          low_bit: 0
+          into: $speed
+
+interrupts:
+  status_register: ISR
+  mask_register: IMR
+  handlers:
+    - name: rx_done
+      mask: 0x00010000
+      action: process_rx
+    - name: tx_done
+      mask: 0x00000001
+      action: process_tx
+    - name: link_change
+      mask: 0x00000080
+      action: handle_link
+
+quirks:
+  - name: killer_branding
+    condition: "device_id >= 0xE000"
+    description: "Killer branded variants have same hardware"

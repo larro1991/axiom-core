@@ -1,0 +1,349 @@
+# Intel I210/I211 Gigabit Ethernet Controller
+# Modern Intel GbE with advanced features
+# Reference: Intel I210 Datasheet
+
+device:
+  name: Intel-I210
+  class: network
+  version: "1.0"
+  vendor_id: 0x8086
+  device_id: 0x1533  # I210
+  description: "Intel I210 Gigabit Ethernet"
+
+variants:
+  - device_id: 0x1533
+    name: "I210"
+  - device_id: 0x1536
+    name: "I210-AS"
+  - device_id: 0x1537
+    name: "I210-IT"
+  - device_id: 0x1538
+    name: "I210-AT"
+  - device_id: 0x1539
+    name: "I211"
+  - device_id: 0x157B
+    name: "I210 Fiber"
+  - device_id: 0x157C
+    name: "I210 SerDes"
+
+memory_map:
+  - name: BAR0
+    size: 0x20000
+    type: mmio
+    description: "Main register space"
+  - name: BAR3
+    size: 0x4000
+    type: mmio
+    description: "MSI-X and Flash"
+
+registers:
+  # Device Control
+  - name: CTRL
+    offset: 0x0000
+    size: 4
+    access: rw
+    description: "Device Control"
+
+  - name: CTRL_EXT
+    offset: 0x0018
+    size: 4
+    access: rw
+    description: "Extended Device Control"
+
+  - name: STATUS
+    offset: 0x0008
+    size: 4
+    access: ro
+    description: "Device Status"
+
+  # Interrupt registers (MSI-X capable)
+  - name: EICS
+    offset: 0x01520
+    size: 4
+    access: wo
+    description: "Extended Interrupt Cause Set"
+
+  - name: EIMS
+    offset: 0x01524
+    size: 4
+    access: rw
+    description: "Extended Interrupt Mask Set"
+
+  - name: EIMC
+    offset: 0x01528
+    size: 4
+    access: wo
+    description: "Extended Interrupt Mask Clear"
+
+  - name: EIAC
+    offset: 0x0152C
+    size: 4
+    access: rw
+    description: "Extended Interrupt Auto Clear"
+
+  - name: EIAM
+    offset: 0x01530
+    size: 4
+    access: rw
+    description: "Extended Interrupt Auto Mask"
+
+  # Multi-queue RX (4 queues)
+  - name: RDBAL0
+    offset: 0x0C000
+    size: 4
+    access: rw
+  - name: RDBAH0
+    offset: 0x0C004
+    size: 4
+    access: rw
+  - name: RDLEN0
+    offset: 0x0C008
+    size: 4
+    access: rw
+  - name: SRRCTL0
+    offset: 0x0C00C
+    size: 4
+    access: rw
+    description: "Split and Replication Receive Control"
+  - name: RDH0
+    offset: 0x0C010
+    size: 4
+    access: ro
+  - name: RDT0
+    offset: 0x0C018
+    size: 4
+    access: rw
+  - name: RXDCTL0
+    offset: 0x0C028
+    size: 4
+    access: rw
+    description: "Receive Descriptor Control"
+
+  # Multi-queue TX (4 queues)
+  - name: TDBAL0
+    offset: 0x0E000
+    size: 4
+    access: rw
+  - name: TDBAH0
+    offset: 0x0E004
+    size: 4
+    access: rw
+  - name: TDLEN0
+    offset: 0x0E008
+    size: 4
+    access: rw
+  - name: TDH0
+    offset: 0x0E010
+    size: 4
+    access: ro
+  - name: TDT0
+    offset: 0x0E018
+    size: 4
+    access: rw
+  - name: TXDCTL0
+    offset: 0x0E028
+    size: 4
+    access: rw
+    description: "Transmit Descriptor Control"
+
+  # Receive Control
+  - name: RCTL
+    offset: 0x0100
+    size: 4
+    access: rw
+
+  # Transmit Control
+  - name: TCTL
+    offset: 0x0400
+    size: 4
+    access: rw
+
+  # MAC Address
+  - name: RAL0
+    offset: 0x5400
+    size: 4
+    access: rw
+  - name: RAH0
+    offset: 0x5404
+    size: 4
+    access: rw
+
+  # RSS (Receive Side Scaling)
+  - name: MRQC
+    offset: 0x5818
+    size: 4
+    access: rw
+    description: "Multiple Receive Queues Command"
+
+  - name: RETA
+    offset: 0x5C00
+    size: 128
+    access: rw
+    description: "Redirection Table (32 x 32-bit)"
+
+  - name: RSSRK
+    offset: 0x5C80
+    size: 40
+    access: rw
+    description: "RSS Random Key (10 x 32-bit)"
+
+  # Time Sync (IEEE 1588 PTP)
+  - name: TSAUXC
+    offset: 0x0B640
+    size: 4
+    access: rw
+    description: "TimeSync Auxiliary Control"
+
+  - name: SYSTIMR
+    offset: 0x0B6F8
+    size: 4
+    access: ro
+    description: "System Time Residue"
+
+  - name: SYSTIML
+    offset: 0x0B600
+    size: 4
+    access: rw
+    description: "System Time Low"
+
+  - name: SYSTIMH
+    offset: 0x0B604
+    size: 4
+    access: rw
+    description: "System Time High"
+
+constants:
+  NUM_RX_QUEUES: 4
+  NUM_TX_QUEUES: 4
+  MAX_FRAME_SIZE: 9728
+
+init_sequence:
+  # Disable interrupts
+  - write:
+      register: EIMC
+      value: 0xFFFFFFFF
+
+  # Software reset
+  - write:
+      register: CTRL
+      value: 0x04000000
+  - wait_ms: 10
+
+  # Disable interrupts after reset
+  - write:
+      register: EIMC
+      value: 0xFFFFFFFF
+
+  # Set up MAC address
+  - call: read_mac
+
+  # Enable all 4 RX queues
+  - loop:
+      count: 4
+      variable: $q
+      steps:
+        - write:
+            register: "RXDCTL$q"
+            value: 0x02000000  # Enable
+
+  # Enable all 4 TX queues
+  - loop:
+      count: 4
+      variable: $q
+      steps:
+        - write:
+            register: "TXDCTL$q"
+            value: 0x02000000  # Enable
+
+  # Set up RSS if multiple queues
+  - write:
+      register: MRQC
+      value: 0x00000001  # Enable RSS
+
+  # Enable receiver
+  - write:
+      register: RCTL
+      value: 0x04008002
+
+  # Enable transmitter
+  - write:
+      register: TCTL
+      value: 0x0004010A
+
+  # Set link up
+  - write:
+      register: CTRL
+      value: 0x00000040
+
+  # Enable interrupts
+  - write:
+      register: EIMS
+      value: 0x0000001F
+
+operations:
+  - name: tx
+    type: descriptor_ring
+    queue_count: 4
+    steps:
+      - read:
+          register: "TDT$queue"
+          into: $tail
+      - increment:
+          variable: $tail
+          modulo: $tx_entries
+      - write:
+          register: "TDT$queue"
+          value: $tail
+
+  - name: rx_poll
+    type: descriptor_ring
+    queue_count: 4
+    returns:
+      - $rx_len
+      - $queue
+
+  - name: read_mac
+    type: read
+    returns:
+      - $mac_low
+      - $mac_high
+    steps:
+      - read:
+          register: RAL0
+          into: $mac_low
+      - read:
+          register: RAH0
+          into: $mac_high
+
+  - name: ptp_get_time
+    type: read
+    description: "Read IEEE 1588 PTP time"
+    returns:
+      - $time_low
+      - $time_high
+    steps:
+      - read:
+          register: SYSTIML
+          into: $time_low
+      - read:
+          register: SYSTIMH
+          into: $time_high
+
+interrupts:
+  type: msix
+  vectors: 5
+  status_register: EICS
+  mask_register: EIMS
+  handlers:
+    - name: rx_queue0
+      vector: 0
+      action: process_rx_q0
+    - name: rx_queue1
+      vector: 1
+      action: process_rx_q1
+    - name: tx_queue0
+      vector: 2
+      action: process_tx_q0
+    - name: other
+      vector: 4
+      action: handle_other

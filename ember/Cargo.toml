@@ -1,0 +1,18 @@
+[package]
+name = "ember"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "EMBER - Estimation of Mesh-Based Emergent Resources"
+
+[features]
+default = ["std"]
+std = ["axiom-hal/std", "axiom-types/std", "axiom-router/std"]
+
+[dependencies]
+axiom-types = { workspace = true }
+axiom-hal = { workspace = true }
+axiom-router = { workspace = true }
+hashbrown = { workspace = true }
+thiserror = { workspace = true }

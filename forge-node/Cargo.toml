@@ -1,0 +1,112 @@
+[package]
+name = "forge-node"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Forge OS Node - AXIOM Protocol Runtime"
+
+[[bin]]
+name = "forge-node"
+path = "src/main.rs"
+
+[dependencies]
+# AXIOM Core
+axiom-types = { workspace = true }
+axiom-codec = { workspace = true }
+axiom-crypto = { workspace = true }
+axiom-clock = { workspace = true }
+axiom-router = { workspace = true }
+axiom-transport = { workspace = true, features = ["quic"] }
+iroh = { version = "1" }
+axiom-hal = { workspace = true }
+axiom-runtime = { workspace = true }
+axiom-guardian = { workspace = true }
+axiom-watcher = { workspace = true }
+axiom-analyst = { workspace = true }
+axiom-responder = { workspace = true }
+axiom-audit = { workspace = true }
+ember = { workspace = true }
+forge-nic = { workspace = true }
+# AXIOM Phase 3.0: capability policy engine, relocated out of this crate's
+# own src/policy.rs into a standalone crate (Burr Phase 2 is its intended
+# second consumer - see DECISIONS.md). Same types/behavior, just consumed
+# as a dependency now instead of a local module.
+axiom-gateway = { workspace = true }
+
+# Runtime
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# Config
+serde = { workspace = true }
+serde_json = "1.0"
+toml = "0.8"
+
+# AXIOM-10: bridges the "network_clients" capability to the UAI broker's HTTP
+# API - the first capability that needs to make an outbound call rather than
+# being pure local logic, so (unlike the rest of this codebase) a real HTTP
+# client dependency is actually warranted here rather than hand-rolling one.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# AXIOM Phase 1.4: zeroes the Omada controller username/password
+# (`fetch_network_clients` in src/network.rs) out of memory as soon as
+# the single UAI `omada_clients` call they're used for returns, instead
+# of leaving them for the allocator to reuse/scribble over on its own
+# schedule. Flagged as a "cheap, do it" polish item in AXIOM-10's
+# original security review - see SECURITY.md.
+zeroize = { version = "1", features = ["derive"] }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Utilities
+hex = { workspace = true }
+
+# Windows native port (2026-08-15): link-local IPv6 interface enumeration on
+# Linux reads `/proc/net/if_inet6` directly (see discovery.rs) - there is no
+# procfs on Windows, so that path needs a real replacement, not a stub. Both
+# deps below are scoped to the Windows target only via
+# `[target...dependencies]` - the Linux binary keeps parsing
+# `/proc/net/if_inet6`/shelling to `ip` directly and never links either of
+# these.
+[target.'cfg(windows)'.dependencies]
+# Used for `iface_ipv4_addrs` (the trusted-subnet gate) only - confirmed
+# working for that on the real target laptop.
+if-addrs = "0.13"
+# Used for `enumerate_link_local_interfaces` - `if-addrs` was tried there
+# first but, per discovery.rs's doc comment on that function, empirically
+# does not return link-local (fe80) addresses on Windows at all, so that
+# one path calls Win32's GetAdaptersAddresses directly instead.
+# AXIOM Windows control pipe (2026-08-18): `control.rs`'s named-pipe server
+# needs a restrictive DACL (see its own doc comment for why - same AXIOM-14
+# Cycle 4 rationale as the Unix socket's 0700/0600 permissions) built via
+# `ConvertStringSecurityDescriptorToSecurityDescriptorW`, which needs
+# `Win32_Security`/`Win32_Security_Authorization`; the matching `LocalFree`
+# in the security-descriptor guard's `Drop` lives in `Win32_Foundation`
+# (already enabled below) despite freeing System-Memory-allocated memory.
+windows-sys = { version = "0.59", features = [
+    "Win32_NetworkManagement_IpHelper",
+    "Win32_NetworkManagement_Ndis",
+    "Win32_Networking_WinSock",
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+] }
+
+[dev-dependencies]
+# Test-only: WanEndpoint::bind_local_only/local_addrs, used by the WAN
+# capability tests in src/node.rs. Cargo unions this with the plain
+# [dependencies] entry above only when building tests - the production
+# binary never gets test-utils enabled.
+axiom-transport = { workspace = true, features = ["quic", "test-utils"] }
+# Test-only: CapabilityPolicy::for_test, used by the in-memory
+# DispatchContext fixtures in src/main.rs and src/node.rs test modules.
+# Same "unions with the plain [dependencies] entry, only for test builds"
+# pattern as axiom-transport's test-utils above.
+axiom-gateway = { workspace = true, features = ["test-utils"] }

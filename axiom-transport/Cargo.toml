@@ -1,0 +1,34 @@
+[package]
+name = "axiom-transport"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Transport layer for AXIOM protocol (UDP/QUIC)"
+
+[features]
+default = ["std", "udp"]
+std = ["axiom-types/std", "axiom-codec/std", "tokio", "rand"]
+udp = []
+quic = ["std", "dep:iroh"]
+# Exposes test-only WAN helpers (WanEndpoint::bind_local_only, local_addrs)
+# across crate boundaries - #[cfg(test)] alone can't do that, so this exists
+# instead of leaving them unconditionally `pub` in the default API surface.
+# Only forge-node's [dev-dependencies] should ever enable this.
+test-utils = []
+
+[dependencies]
+axiom-types = { workspace = true }
+axiom-codec = { workspace = true }
+axiom-clock = { workspace = true }
+axiom-crypto = { workspace = true }
+tokio = { workspace = true, optional = true }
+thiserror = { workspace = true }
+hashbrown = { workspace = true }
+ed25519-dalek = { workspace = true }
+tracing = { workspace = true }
+rand = { version = "0.8", optional = true }
+iroh = { version = "1", optional = true }
+
+[dev-dependencies]
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

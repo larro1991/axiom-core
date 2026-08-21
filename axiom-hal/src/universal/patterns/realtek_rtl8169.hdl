@@ -1,0 +1,577 @@
+# Realtek RTL8169/RTL8168/RTL8111 Gigabit Ethernet
+# Very common consumer/motherboard NIC
+# Reference: RTL8169 Programmer's Guide
+
+device:
+  name: Realtek-RTL8169
+  class: network
+  version: "1.0"
+  vendor_id: 0x10EC
+  device_id: 0x8169
+  description: "Realtek RTL8169 Gigabit Ethernet"
+
+variants:
+  - device_id: 0x8169
+    name: "RTL8169"
+  - device_id: 0x8168
+    name: "RTL8168"
+  - device_id: 0x8136
+    name: "RTL8101E"
+  - device_id: 0x8167
+    name: "RTL8169SC"
+  - device_id: 0x8161
+    name: "RTL8168/8111"
+  - device_id: 0x8162
+    name: "RTL8168/8111"
+  - device_id: 0x8129
+    name: "RTL8169"
+
+memory_map:
+  - name: BAR0
+    size: 256
+    type: io
+    description: "I/O port space"
+  - name: BAR1
+    size: 256
+    type: mmio
+    description: "MMIO register space"
+
+registers:
+  # MAC Address
+  - name: IDR0
+    offset: 0x00
+    size: 4
+    access: rw
+    description: "MAC Address bytes 0-3"
+  - name: IDR4
+    offset: 0x04
+    size: 2
+    access: rw
+    description: "MAC Address bytes 4-5"
+
+  # Multicast
+  - name: MAR0
+    offset: 0x08
+    size: 4
+    access: rw
+    description: "Multicast filter 0-3"
+  - name: MAR4
+    offset: 0x0C
+    size: 4
+    access: rw
+    description: "Multicast filter 4-7"
+
+  # Transmit Status (4 descriptors in legacy mode)
+  - name: TSD0
+    offset: 0x10
+    size: 4
+    access: rw
+    description: "TX Status Descriptor 0"
+  - name: TSD1
+    offset: 0x14
+    size: 4
+    access: rw
+  - name: TSD2
+    offset: 0x18
+    size: 4
+    access: rw
+  - name: TSD3
+    offset: 0x1C
+    size: 4
+    access: rw
+
+  # Transmit Start Address (legacy)
+  - name: TSAD0
+    offset: 0x20
+    size: 4
+    access: rw
+  - name: TSAD1
+    offset: 0x24
+    size: 4
+    access: rw
+  - name: TSAD2
+    offset: 0x28
+    size: 4
+    access: rw
+  - name: TSAD3
+    offset: 0x2C
+    size: 4
+    access: rw
+
+  # RX Buffer Start
+  - name: RBSTART
+    offset: 0x30
+    size: 4
+    access: rw
+    description: "Receive Buffer Start Address"
+
+  # Command Register
+  - name: CR
+    offset: 0x37
+    size: 1
+    access: rw
+    description: "Command Register"
+    fields:
+      - name: BUFE
+        bit: 0
+        description: "Buffer Empty"
+      - name: TE
+        bit: 2
+        description: "Transmitter Enable"
+      - name: RE
+        bit: 3
+        description: "Receiver Enable"
+      - name: RST
+        bit: 4
+        description: "Software Reset"
+
+  # Current Address of Packet Read
+  - name: CAPR
+    offset: 0x38
+    size: 2
+    access: rw
+    description: "Current Address of Packet Read"
+
+  # Current Buffer Address
+  - name: CBR
+    offset: 0x3A
+    size: 2
+    access: ro
+    description: "Current Buffer Address"
+
+  # Interrupt Mask
+  - name: IMR
+    offset: 0x3C
+    size: 2
+    access: rw
+    description: "Interrupt Mask Register"
+
+  # Interrupt Status
+  - name: ISR
+    offset: 0x3E
+    size: 2
+    access: rw
+    description: "Interrupt Status Register"
+    fields:
+      - name: ROK
+        bit: 0
+        description: "Receive OK"
+      - name: RER
+        bit: 1
+        description: "Receive Error"
+      - name: TOK
+        bit: 2
+        description: "Transmit OK"
+      - name: TER
+        bit: 3
+        description: "Transmit Error"
+      - name: RXOVW
+        bit: 4
+        description: "RX Buffer Overflow"
+      - name: PUN
+        bit: 5
+        description: "Packet Underrun"
+      - name: FOVW
+        bit: 6
+        description: "FIFO Overflow"
+      - name: LENCHG
+        bit: 13
+        description: "Cable Length Change"
+      - name: TIMEOUT
+        bit: 14
+        description: "Timeout"
+      - name: SERR
+        bit: 15
+        description: "System Error"
+
+  # TX Configuration
+  - name: TCR
+    offset: 0x40
+    size: 4
+    access: rw
+    description: "Transmit Configuration"
+    fields:
+      - name: CLRABT
+        bit: 0
+        description: "Clear Abort"
+      - name: MXDMA
+        bits: [10, 8]
+        description: "Max DMA Burst (0=16, 7=unlimited)"
+      - name: IFG
+        bits: [25, 24]
+        description: "Interframe Gap Time"
+
+  # RX Configuration
+  - name: RCR
+    offset: 0x44
+    size: 4
+    access: rw
+    description: "Receive Configuration"
+    fields:
+      - name: AAP
+        bit: 0
+        description: "Accept All Packets"
+      - name: APM
+        bit: 1
+        description: "Accept Physical Match"
+      - name: AM
+        bit: 2
+        description: "Accept Multicast"
+      - name: AB
+        bit: 3
+        description: "Accept Broadcast"
+      - name: AR
+        bit: 4
+        description: "Accept Runt"
+      - name: AER
+        bit: 5
+        description: "Accept Error Packet"
+      - name: WRAP
+        bit: 7
+        description: "Wrap at end of buffer"
+      - name: MXDMA
+        bits: [10, 8]
+        description: "Max DMA Burst"
+      - name: RBLEN
+        bits: [12, 11]
+        description: "RX Buffer Length (00=8K, 01=16K, 10=32K, 11=64K)"
+
+  # Timer Count (for interrupt coalescing)
+  - name: TCTR
+    offset: 0x48
+    size: 4
+    access: rw
+
+  # Missed Packet Counter
+  - name: MPC
+    offset: 0x4C
+    size: 4
+    access: rw
+
+  # 93C46 EEPROM Command
+  - name: CR9346
+    offset: 0x50
+    size: 1
+    access: rw
+    description: "EEPROM Command Register"
+
+  # Config Registers
+  - name: CONFIG0
+    offset: 0x51
+    size: 1
+    access: ro
+  - name: CONFIG1
+    offset: 0x52
+    size: 1
+    access: rw
+
+  # Timer Interrupt
+  - name: TIMERINT
+    offset: 0x54
+    size: 4
+    access: rw
+
+  # Media Status
+  - name: MSR
+    offset: 0x58
+    size: 1
+    access: ro
+    description: "Media Status Register"
+    fields:
+      - name: RXPF
+        bit: 0
+        description: "RX Pause Flag"
+      - name: TXPF
+        bit: 1
+        description: "TX Pause Flag"
+      - name: LINKB
+        bit: 2
+        description: "Inverse of Link Status"
+      - name: SPEED_10
+        bit: 3
+        description: "Set if 10 Mbps"
+      - name: RXFCE
+        bit: 6
+        description: "RX Flow Control Enable"
+      - name: TXFCE
+        bit: 7
+        description: "TX Flow Control Enable"
+
+  # Config Registers continued
+  - name: CONFIG3
+    offset: 0x59
+    size: 1
+    access: rw
+  - name: CONFIG4
+    offset: 0x5A
+    size: 1
+    access: rw
+
+  # PHY registers (RTL8169 has integrated PHY)
+  - name: BMCR
+    offset: 0x62
+    size: 2
+    access: rw
+    description: "Basic Mode Control Register"
+  - name: BMSR
+    offset: 0x64
+    size: 2
+    access: ro
+    description: "Basic Mode Status Register"
+  - name: ANAR
+    offset: 0x66
+    size: 2
+    access: rw
+    description: "Auto-Negotiation Advertisement"
+  - name: ANLPAR
+    offset: 0x68
+    size: 2
+    access: ro
+    description: "Auto-Negotiation Link Partner Ability"
+  - name: ANER
+    offset: 0x6A
+    size: 2
+    access: ro
+    description: "Auto-Negotiation Expansion"
+  - name: GBCR
+    offset: 0x6C
+    size: 2
+    access: rw
+    description: "1000Base-T Control"
+  - name: GBSR
+    offset: 0x6E
+    size: 2
+    access: ro
+    description: "1000Base-T Status"
+  - name: PHYSTATUS
+    offset: 0x6C
+    size: 1
+    access: ro
+    description: "PHY Status"
+
+  # C+ Command (for enhanced mode with descriptor rings)
+  - name: CPCR
+    offset: 0xE0
+    size: 2
+    access: rw
+    description: "C+ Command Register"
+    fields:
+      - name: VLAN_DE
+        bit: 6
+        description: "VLAN De-tagging"
+      - name: CSUM
+        bit: 5
+        description: "RX Checksum Offload"
+      - name: PCI_MUL_RW
+        bit: 4
+        description: "PCI Multiple R/W"
+      - name: PCI_DAC
+        bit: 3
+        description: "PCI Dual Address Cycle"
+      - name: TXENB
+        bit: 0
+        description: "C+ TX Mode Enable"
+      - name: RXENB
+        bit: 1
+        description: "C+ RX Mode Enable"
+
+  # TX/RX Descriptor Start Address (C+ mode)
+  - name: TNPDS_LOW
+    offset: 0x20
+    size: 4
+    access: rw
+    description: "TX Normal Priority Descriptors Low"
+  - name: TNPDS_HIGH
+    offset: 0x24
+    size: 4
+    access: rw
+    description: "TX Normal Priority Descriptors High"
+  - name: THPDS_LOW
+    offset: 0x28
+    size: 4
+    access: rw
+    description: "TX High Priority Descriptors Low"
+  - name: THPDS_HIGH
+    offset: 0x2C
+    size: 4
+    access: rw
+    description: "TX High Priority Descriptors High"
+  - name: RDSAR_LOW
+    offset: 0xE4
+    size: 4
+    access: rw
+    description: "RX Descriptor Start Address Low"
+  - name: RDSAR_HIGH
+    offset: 0xE8
+    size: 4
+    access: rw
+    description: "RX Descriptor Start Address High"
+
+  # Max TX Packet Size
+  - name: MTPS
+    offset: 0xEC
+    size: 1
+    access: rw
+    description: "Max TX Packet Size"
+
+constants:
+  # Buffer sizes for legacy mode
+  RX_BUF_8K: 0x00
+  RX_BUF_16K: 0x01
+  RX_BUF_32K: 0x02
+  RX_BUF_64K: 0x03
+
+  # Interrupt bits
+  INT_ROK: 0x0001
+  INT_RER: 0x0002
+  INT_TOK: 0x0004
+  INT_TER: 0x0008
+  INT_RXOVW: 0x0010
+  INT_TIMEOUT: 0x4000
+  INT_SERR: 0x8000
+
+init_sequence:
+  # Software reset
+  - write:
+      register: CR
+      value: 0x10  # RST
+  - wait_ms: 10
+
+  # Wait for reset complete
+  - poll:
+      register: CR
+      expected: 0x00
+      mask: 0x10
+      timeout_ms: 1000
+
+  # Unlock config registers (write 0xC0 to CR9346)
+  - write:
+      register: CR9346
+      value: 0xC0
+
+  # Enable C+ mode for descriptor-based operation
+  - write:
+      register: CPCR
+      value: 0x0003  # TXENB | RXENB
+
+  # Set TX descriptor address
+  - write:
+      register: TNPDS_LOW
+      value: $tx_ring_phys_low
+  - write:
+      register: TNPDS_HIGH
+      value: $tx_ring_phys_high
+
+  # Set RX descriptor address
+  - write:
+      register: RDSAR_LOW
+      value: $rx_ring_phys_low
+  - write:
+      register: RDSAR_HIGH
+      value: $rx_ring_phys_high
+
+  # Set max TX packet size
+  - write:
+      register: MTPS
+      value: 0x3B  # 9.5 KB
+
+  # Configure RX (accept broadcast, no runt, no errors, wrap)
+  - write:
+      register: RCR
+      value: 0x0000E70A  # AB | AM | APM | WRAP | MXDMA=unlimited | RBLEN=8K+16
+
+  # Configure TX
+  - write:
+      register: TCR
+      value: 0x03000700  # IFG=normal | MXDMA=unlimited
+
+  # Clear pending interrupts
+  - write:
+      register: ISR
+      value: 0xFFFF
+
+  # Enable interrupts
+  - write:
+      register: IMR
+      value: 0x0025  # ROK | TOK | RXOVW
+
+  # Lock config registers
+  - write:
+      register: CR9346
+      value: 0x00
+
+  # Enable TX and RX
+  - write:
+      register: CR
+      value: 0x0C  # TE | RE
+
+operations:
+  - name: tx
+    type: descriptor_ring
+    steps:
+      # In C+ mode, write to TDT equivalent by updating descriptors
+      # and writing to a trigger register
+
+  - name: rx_poll
+    type: descriptor_ring
+    returns:
+      - $rx_len
+
+  - name: read_mac
+    type: read
+    returns:
+      - $mac_low
+      - $mac_high
+    steps:
+      - read:
+          register: IDR0
+          into: $mac_low
+      - read:
+          register: IDR4
+          into: $mac_high
+
+  - name: get_link_status
+    type: read
+    returns:
+      - $link_up
+      - $speed
+    steps:
+      - read:
+          register: MSR
+          into: $msr
+      - extract:
+          from: $msr
+          high_bit: 2
+          low_bit: 2
+          into: $linkb
+      # Link up if LINKB is 0
+      - compute:
+          expression: "1 - $linkb"
+          into: $link_up
+
+interrupts:
+  status_register: ISR
+  mask_register: IMR
+  ack_by_write: true
+  handlers:
+    - name: rx_ok
+      mask: 0x0001
+      action: process_rx
+    - name: tx_ok
+      mask: 0x0004
+      action: process_tx
+    - name: rx_overflow
+      mask: 0x0010
+      action: handle_overflow
+
+quirks:
+  - name: rtl8168_variants
+    condition: "device_id == 0x8168"
+    description: "RTL8168 has many sub-variants with different PHYs"
+    adjustments:
+      - check_ocp_version: true
+
+  - name: aspm_workaround
+    description: "Some RTL8168 need ASPM disabled"
+    adjustments:
+      - disable_aspm: true

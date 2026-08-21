@@ -1,0 +1,20 @@
+[package]
+name = "axiom-router"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Intent-based routing for AXIOM protocol"
+
+[features]
+default = ["std"]
+std = ["axiom-types/std", "tokio"]
+
+[dependencies]
+axiom-types = { workspace = true }
+axiom-crypto = { workspace = true }
+axiom-clock = { workspace = true }
+hashbrown = { workspace = true }
+blake3 = { workspace = true }
+tokio = { workspace = true, optional = true }
+thiserror = { workspace = true }

@@ -1,0 +1,9 @@
+FROM rustlang/rust:nightly-bookworm
+
+WORKDIR /forge/axiom-core
+
+COPY . .
+
+RUN cargo build --release 2>&1
+
+CMD ["cargo", "build", "--release"]

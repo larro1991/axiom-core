@@ -1,0 +1,32 @@
+[package]
+name = "forge-nic"
+version = "0.1.0"
+edition = "2021"
+description = "FORGE NIC - AI-Native Network Interface Controller"
+license = "MIT OR Apache-2.0"
+
+[features]
+default = ["std"]
+std = [
+    "axiom-hal/std",
+    "axiom-transport/std",
+    "axiom-types/std",
+    "axiom-guardian/std",
+    "axiom-watcher/std",
+    "axiom-analyst/std",
+    "axiom-responder/std",
+]
+
+[dependencies]
+axiom-hal = { path = "../axiom-hal", default-features = false }
+axiom-transport = { path = "../axiom-transport", default-features = false }
+axiom-types = { path = "../axiom-types", default-features = false }
+axiom-guardian = { path = "../axiom-guardian", default-features = false }
+axiom-watcher = { path = "../axiom-watcher", default-features = false }
+axiom-analyst = { path = "../axiom-analyst", default-features = false }
+axiom-responder = { path = "../axiom-responder", default-features = false }
+hashbrown = "0.14"
+thiserror = "1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }

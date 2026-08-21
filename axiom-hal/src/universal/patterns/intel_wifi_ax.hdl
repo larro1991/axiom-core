@@ -1,0 +1,365 @@
+# Intel WiFi 6/6E (AX200/AX201/AX210/AX211)
+# Modern WiFi adapters with 802.11ax support
+# Reference: Intel Wireless-AC/AX Programming Guide
+
+device:
+  name: Intel-WiFi-AX
+  class: wireless
+  version: "1.0"
+  vendor_id: 0x8086
+  device_id: 0x2723  # AX200
+  description: "Intel WiFi 6 AX200/201/210/211"
+
+variants:
+  # WiFi 6 (802.11ax)
+  - device_id: 0x2723
+    name: "Wi-Fi 6 AX200"
+  - device_id: 0x2725
+    name: "Wi-Fi 6 AX201"
+  - device_id: 0x02F0
+    name: "Wi-Fi 6 AX201"
+  - device_id: 0x06F0
+    name: "Wi-Fi 6 AX201"
+  - device_id: 0xA0F0
+    name: "Wi-Fi 6 AX201"
+  - device_id: 0x34F0
+    name: "Wi-Fi 6 AX201"
+  - device_id: 0x3DF0
+    name: "Wi-Fi 6 AX201"
+  # WiFi 6E (802.11ax with 6GHz)
+  - device_id: 0x2729
+    name: "Wi-Fi 6E AX210"
+  - device_id: 0x272B
+    name: "Wi-Fi 6E AX211"
+  - device_id: 0x51F0
+    name: "Wi-Fi 6E AX211"
+  - device_id: 0x51F1
+    name: "Wi-Fi 6E AX211"
+  - device_id: 0x54F0
+    name: "Wi-Fi 6E AX211"
+  # WiFi 5 (802.11ac) - same driver family
+  - device_id: 0x24FB
+    name: "Wireless-AC 9260"
+  - device_id: 0x24FD
+    name: "Wireless-AC 9260"
+  - device_id: 0x9DF0
+    name: "Wireless-AC 9560"
+  - device_id: 0xA370
+    name: "Wireless-AC 9560"
+  - device_id: 0x31DC
+    name: "Wireless-AC 9560"
+
+memory_map:
+  - name: BAR0
+    size: 0x2000
+    type: mmio
+    description: "CSR space"
+
+registers:
+  # Hardware/SW Information
+  - name: HW_REV
+    offset: 0x028
+    size: 4
+    access: ro
+    description: "Hardware Revision"
+
+  # CSR GPIO
+  - name: CSR_GP_CNTRL
+    offset: 0x024
+    size: 4
+    access: rw
+    description: "General Purpose Control"
+    fields:
+      - name: MAC_ACCESS_REQ
+        bit: 0
+      - name: MAC_CLOCK_READY
+        bit: 1
+      - name: INIT_DONE
+        bit: 2
+      - name: MAC_ACCESS_ENA
+        bit: 3
+      - name: SLEEP_REQ
+        bit: 4
+      - name: SW_RESET
+        bit: 7
+      - name: REG_FLAG_HW_RF_KILL_SW
+        bit: 17
+
+  # Reset
+  - name: CSR_RESET
+    offset: 0x020
+    size: 4
+    access: rw
+    fields:
+      - name: RESET_REG_FLAG_NEVO_RESET
+        bit: 0
+      - name: RESET_REG_FLAG_FORCE_NMI
+        bit: 1
+      - name: RESET_REG_FLAG_SW_RESET
+        bit: 7
+      - name: RESET_REG_FLAG_MASTER_DISABLED
+        bit: 8
+
+  # Interrupt Control
+  - name: CSR_INT
+    offset: 0x008
+    size: 4
+    access: rw
+    description: "Interrupt Status"
+
+  - name: CSR_INT_MASK
+    offset: 0x00C
+    size: 4
+    access: rw
+    description: "Interrupt Mask"
+
+  - name: CSR_FH_INT_STATUS
+    offset: 0x010
+    size: 4
+    access: ro
+    description: "FH Interrupt Status"
+
+  # MSIX
+  - name: CSR_MSIX_HW_INT_MASK
+    offset: 0x2044
+    size: 4
+    access: rw
+
+  - name: CSR_MSIX_FH_INT_MASK
+    offset: 0x2000
+    size: 4
+    access: rw
+
+  # DMA Channel
+  - name: FH_TCSR_CHNL_TX_CONFIG
+    offset: 0x1D00
+    size: 4
+    access: rw
+    description: "TX DMA Channel Config"
+    array_size: 32
+    array_stride: 0x20
+
+  - name: FH_SRVC_CHNL_SRAM_ADDR
+    offset: 0x1C00
+    size: 4
+    access: rw
+
+  # Scheduler
+  - name: SCD_GP_CTRL
+    offset: 0x0A68
+    size: 4
+    access: rw
+
+  - name: SCD_QUEUE_STATUS
+    offset: 0x0A70
+    size: 4
+    access: rw
+    array_size: 32
+
+  # TX FIFO
+  - name: SCD_TX_STTS_QUEUE_SET
+    offset: 0x0A80
+    size: 4
+    access: rw
+
+  - name: SCD_QUEUE_RDPTR
+    offset: 0x0A90
+    size: 4
+    access: rw
+    array_size: 32
+
+  # Memory mapped peripherals
+  - name: PRPH_SCRATCH
+    offset: 0x0A04
+    size: 4
+    access: rw
+    description: "Peripheral Scratch"
+
+  # Firmware regions
+  - name: LMPM_SECURE_BOOT_CONFIG
+    offset: 0x1E024
+    size: 4
+    access: rw
+
+  - name: LMPM_CPU_RESET
+    offset: 0x1E01C
+    size: 4
+    access: rw
+
+  # UMAC config
+  - name: UMAC_PRPH_WFPM_CTRL
+    offset: 0x1E7000
+    size: 4
+    access: rw
+
+constants:
+  # Interrupt flags
+  INT_FH_RX: 0x00000001
+  INT_FH_TX: 0x00000002
+  INT_HW_ERR: 0x00000004
+  INT_FH_TX_CHNL0: 0x00000010
+  INT_FH_TX_CHNL1: 0x00000020
+  INT_SW_RX: 0x00000800
+  INT_ALIVE: 0x00001000
+  INT_RF_KILL: 0x00020000
+  INT_FW_ERR: 0x02000000
+
+  # Queue indices
+  TX_CMD_QUEUE: 0
+  TX_DEF_QUEUE: 1
+  NUM_TX_QUEUES: 32
+
+init_sequence:
+  # Check if RF Kill switch is active
+  - read:
+      register: CSR_GP_CNTRL
+      into: $gp_ctrl
+  - if:
+      condition: "($gp_ctrl & 0x20000) == 0"
+      then:
+        - fail: "RF Kill switch is active"
+
+  # Request access to MAC
+  - write:
+      register: CSR_GP_CNTRL
+      value: 0x01  # MAC_ACCESS_REQ
+
+  # Wait for access
+  - poll:
+      register: CSR_GP_CNTRL
+      expected: 0x08
+      mask: 0x08
+      timeout_ms: 5000
+
+  # Software reset
+  - write:
+      register: CSR_RESET
+      value: 0x80  # SW_RESET
+  - wait_ms: 100
+
+  # Disable interrupts
+  - write:
+      register: CSR_INT_MASK
+      value: 0x00000000
+  - write:
+      register: CSR_INT
+      value: 0xFFFFFFFF  # Clear pending
+
+  # Stop DMA channels
+  - loop:
+      count: 32
+      variable: $ch
+      steps:
+        - write:
+            register: "FH_TCSR_CHNL_TX_CONFIG[$ch]"
+            value: 0x00
+
+  # Load firmware (device-specific process)
+  - call: load_firmware
+
+  # Wait for firmware alive notification
+  - poll:
+      register: CSR_INT
+      expected: 0x00001000  # INT_ALIVE
+      mask: 0x00001000
+      timeout_ms: 10000
+
+  # Configure scheduler
+  - write:
+      register: SCD_GP_CTRL
+      value: 0x01
+
+  # Set up default TX queue
+  - call: setup_tx_queue
+    params:
+      queue_id: 1
+
+  # Enable interrupts
+  - write:
+      register: CSR_INT_MASK
+      value: 0x0203183E
+
+operations:
+  - name: load_firmware
+    type: firmware
+    description: "Load firmware to device SRAM"
+    steps:
+      # Complex multi-stage firmware loading
+      # Involves writing to SRAM via DMA
+      - write:
+          register: LMPM_CPU_RESET
+          value: 0x80000000
+
+  - name: setup_tx_queue
+    type: config
+    params:
+      - queue_id: u8
+    steps:
+      - write:
+          register: "SCD_QUEUE_STATUS[$queue_id]"
+          value: 0x01
+
+  - name: tx
+    type: wifi_tx
+    description: "Transmit WiFi frame"
+    steps:
+      # Build TFD (Transmit Frame Descriptor)
+      # Add to TX queue
+      # Update write pointer
+
+  - name: scan
+    type: command
+    description: "Initiate scan"
+    params:
+      - channel_list: list
+      - scan_type: u8
+
+  - name: connect
+    type: command
+    description: "Connect to access point"
+    params:
+      - ssid: string
+      - bssid: bytes
+      - security: u8
+
+  - name: get_signal_strength
+    type: read
+    returns:
+      - $rssi
+      - $noise
+
+interrupts:
+  type: msix
+  vectors: 8
+  status_register: CSR_INT
+  mask_register: CSR_INT_MASK
+  handlers:
+    - name: rx_ready
+      mask: 0x00000001
+      action: process_rx
+    - name: tx_complete
+      mask: 0x00000002
+      action: process_tx
+    - name: error
+      mask: 0x00000004
+      action: handle_error
+    - name: alive
+      mask: 0x00001000
+      action: handle_alive
+    - name: rf_kill
+      mask: 0x00020000
+      action: handle_rfkill
+    - name: fw_error
+      mask: 0x02000000
+      action: handle_fw_error
+
+features:
+  - wifi_standard: [802.11a, 802.11b, 802.11g, 802.11n, 802.11ac, 802.11ax]
+  - bands: [2.4GHz, 5GHz, 6GHz]  # 6GHz for WiFi 6E only
+  - mimo: "2x2"
+  - max_speed_mbps: 2400
+  - encryption: [WPA, WPA2, WPA3, OWE]
+  - bluetooth: true
+  - mu_mimo: true
+  - ofdma: true
+  - bss_coloring: true

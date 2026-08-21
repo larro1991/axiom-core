@@ -1,0 +1,384 @@
+# Intel XL710/X710/XXV710 10/25/40GbE Controller
+# High-speed data center NIC with SR-IOV
+# Reference: Intel XL710 Datasheet
+
+device:
+  name: Intel-XL710
+  class: network
+  version: "1.0"
+  vendor_id: 0x8086
+  device_id: 0x1572  # XL710 QSFP+
+  description: "Intel XL710 40GbE Network Adapter"
+
+variants:
+  - device_id: 0x1572
+    name: "XL710 QSFP+ 40GbE"
+  - device_id: 0x1574
+    name: "XL710 QSFP+ 40GbE VF"
+  - device_id: 0x1580
+    name: "XL710 KX4 10GbE"
+  - device_id: 0x1581
+    name: "X710 SFP+ 10GbE"
+  - device_id: 0x1583
+    name: "XL710 QSFP+ 40GbE"
+  - device_id: 0x1584
+    name: "XL710 QSFP+ 40GbE VF"
+  - device_id: 0x1585
+    name: "X710-T 10GBase-T"
+  - device_id: 0x158A
+    name: "XXV710 25GbE"
+  - device_id: 0x158B
+    name: "XXV710 25GbE SFP28"
+  - device_id: 0x37CE
+    name: "X722 10GbE"
+  - device_id: 0x37CF
+    name: "X722 10GbE VF"
+  - device_id: 0x37D0
+    name: "X722 1GbE"
+
+memory_map:
+  - name: BAR0
+    size: 0x800000  # 8 MB
+    type: mmio
+    description: "Main register space"
+
+registers:
+  # PF registers
+  - name: PFGEN_CTRL
+    offset: 0x00092400
+    size: 4
+    access: rw
+    description: "PF General Control"
+    fields:
+      - name: PFSWE
+        bit: 0
+        description: "PF Software Reset"
+
+  - name: PFGEN_STATE
+    offset: 0x00088000
+    size: 4
+    access: ro
+    description: "PF General State"
+
+  # Interrupt registers
+  - name: PFINT_DYN_CTLN
+    offset: 0x00034800
+    size: 4
+    access: rw
+    description: "PF Interrupt Dynamic Control (per vector)"
+    array_size: 512
+    array_stride: 4
+
+  - name: PFINT_LNKLSTN
+    offset: 0x00035000
+    size: 4
+    access: rw
+    description: "PF Interrupt Linked List"
+    array_size: 512
+
+  - name: PFINT_ITRN
+    offset: 0x00030000
+    size: 4
+    access: rw
+    description: "PF Interrupt Throttle Rate"
+    array_size: 512
+
+  - name: PFINT_ICR0
+    offset: 0x00038780
+    size: 4
+    access: ro
+    description: "PF Interrupt Cause 0"
+
+  - name: PFINT_ICR0_ENA
+    offset: 0x00038800
+    size: 4
+    access: rw
+    description: "PF Interrupt Cause 0 Enable"
+
+  # Queue registers (up to 1536 queues per PF)
+  - name: QTX_CTL
+    offset: 0x00104000
+    size: 4
+    access: rw
+    description: "Queue TX Control"
+    array_size: 1536
+    array_stride: 4
+
+  - name: QTX_TAIL
+    offset: 0x00108000
+    size: 4
+    access: rw
+    description: "Queue TX Tail"
+    array_size: 1536
+    array_stride: 4
+
+  - name: QRX_CTL
+    offset: 0x00120000
+    size: 4
+    access: rw
+    description: "Queue RX Control"
+    array_size: 1536
+    array_stride: 4
+
+  - name: QRX_TAIL
+    offset: 0x00128000
+    size: 4
+    access: rw
+    description: "Queue RX Tail"
+    array_size: 1536
+    array_stride: 4
+
+  # Queue Context registers
+  - name: PFCM_LAN_CONTEXT_DATA
+    offset: 0x0010C000
+    size: 4
+    access: rw
+    description: "LAN Context Data"
+    array_size: 128
+
+  - name: PFCM_LAN_CONTEXT_CTL
+    offset: 0x0010C200
+    size: 4
+    access: rw
+    description: "LAN Context Control"
+
+  # Admin Queue registers
+  - name: PF_ATQBAL
+    offset: 0x00080000
+    size: 4
+    access: rw
+    description: "Admin TX Queue Base Address Low"
+
+  - name: PF_ATQBAH
+    offset: 0x00080100
+    size: 4
+    access: rw
+    description: "Admin TX Queue Base Address High"
+
+  - name: PF_ATQLEN
+    offset: 0x00080200
+    size: 4
+    access: rw
+    description: "Admin TX Queue Length"
+
+  - name: PF_ATQH
+    offset: 0x00080300
+    size: 4
+    access: ro
+    description: "Admin TX Queue Head"
+
+  - name: PF_ATQT
+    offset: 0x00080400
+    size: 4
+    access: rw
+    description: "Admin TX Queue Tail"
+
+  - name: PF_ARQBAL
+    offset: 0x00080080
+    size: 4
+    access: rw
+    description: "Admin RX Queue Base Address Low"
+
+  - name: PF_ARQBAH
+    offset: 0x00080180
+    size: 4
+    access: rw
+    description: "Admin RX Queue Base Address High"
+
+  - name: PF_ARQLEN
+    offset: 0x00080280
+    size: 4
+    access: rw
+    description: "Admin RX Queue Length"
+
+  - name: PF_ARQH
+    offset: 0x00080380
+    size: 4
+    access: ro
+    description: "Admin RX Queue Head"
+
+  - name: PF_ARQT
+    offset: 0x00080480
+    size: 4
+    access: rw
+    description: "Admin RX Queue Tail"
+
+  # Link status
+  - name: PRTMAC_LINK_STATUS
+    offset: 0x001E2420
+    size: 4
+    access: ro
+    description: "Port MAC Link Status"
+
+  # Statistics
+  - name: GLPRT_GORCL
+    offset: 0x00300000
+    size: 4
+    access: ro
+    description: "Port Good Octets Received Low"
+
+  - name: GLPRT_GORCH
+    offset: 0x00300004
+    size: 4
+    access: ro
+    description: "Port Good Octets Received High"
+
+  - name: GLPRT_GOTCL
+    offset: 0x00300680
+    size: 4
+    access: ro
+    description: "Port Good Octets Transmitted Low"
+
+  - name: GLPRT_GOTCH
+    offset: 0x00300684
+    size: 4
+    access: ro
+    description: "Port Good Octets Transmitted High"
+
+constants:
+  MAX_QUEUES_PF: 1536
+  MAX_MSIX_VECTORS: 512
+  ADMIN_QUEUE_SIZE: 32
+
+  # Admin Queue opcodes (firmware communication)
+  AQ_OP_GET_VERSION: 0x0001
+  AQ_OP_DRIVER_VERSION: 0x0002
+  AQ_OP_GET_CAPS: 0x0007
+  AQ_OP_SET_MAC_CONFIG: 0x0603
+  AQ_OP_GET_LINK_STATUS: 0x0607
+  AQ_OP_SET_RSS_LUT: 0x0B03
+  AQ_OP_SET_RSS_KEY: 0x0B02
+
+init_sequence:
+  # Check firmware version via admin queue
+  - call: aq_init
+
+  # Send get_version command
+  - call: aq_send_command
+    params:
+      opcode: 0x0001  # GET_VERSION
+
+  # Get device capabilities
+  - call: aq_send_command
+    params:
+      opcode: 0x0007  # GET_CAPS
+
+  # Configure MAC
+  - call: aq_send_command
+    params:
+      opcode: 0x0603  # SET_MAC_CONFIG
+
+  # Set up default VSI (Virtual Station Interface)
+  - call: vsi_setup
+    params:
+      vsi_id: 0
+
+  # Enable queues
+  - loop:
+      count: $num_queues
+      variable: $q
+      steps:
+        - call: queue_enable
+          params:
+            queue_id: $q
+
+  # Enable interrupts
+  - call: msix_setup
+
+operations:
+  - name: aq_init
+    type: admin_queue
+    description: "Initialize admin queue"
+    steps:
+      - write:
+          register: PF_ATQBAL
+          value: $atq_phys_low
+      - write:
+          register: PF_ATQBAH
+          value: $atq_phys_high
+      - write:
+          register: PF_ATQLEN
+          value: 0x80000020  # Enable | 32 entries
+      - write:
+          register: PF_ARQBAL
+          value: $arq_phys_low
+      - write:
+          register: PF_ARQBAH
+          value: $arq_phys_high
+      - write:
+          register: PF_ARQLEN
+          value: 0x80000020
+
+  - name: aq_send_command
+    type: admin_queue
+    description: "Send admin queue command"
+    params:
+      - opcode: u16
+    steps:
+      # Build descriptor, write to ATQ, bump tail
+      - read:
+          register: PF_ATQT
+          into: $tail
+      - increment:
+          variable: $tail
+          modulo: 32
+      - write:
+          register: PF_ATQT
+          value: $tail
+
+  - name: tx
+    type: descriptor_ring
+    queue_count: 1536
+    steps:
+      - read:
+          register: "QTX_TAIL[$queue]"
+          into: $tail
+      - increment:
+          variable: $tail
+          modulo: $ring_size
+      - write:
+          register: "QTX_TAIL[$queue]"
+          value: $tail
+
+  - name: rx_poll
+    type: descriptor_ring
+    queue_count: 1536
+    returns:
+      - $rx_len
+      - $queue
+
+  - name: get_link_status
+    type: admin_queue
+    returns:
+      - $link_up
+      - $speed_gbps
+    steps:
+      - call: aq_send_command
+        params:
+          opcode: 0x0607
+
+interrupts:
+  type: msix
+  vectors: 512
+  dynamic_itr: true
+  handlers:
+    - name: queue_interrupt
+      description: "Per-queue interrupt"
+    - name: admin_queue
+      vector: 0
+      action: process_admin_queue
+    - name: other
+      description: "Mailbox, errors"
+
+features:
+  - sr_iov:
+      max_vfs: 128
+  - rss:
+      max_queues: 64
+      hash_types: [ipv4, ipv6, tcp4, tcp6, udp4, udp6]
+  - checksum_offload: [ipv4, tcp, udp]
+  - tso: true
+  - lro: true
+  - vxlan_offload: true
+  - geneve_offload: true
+  - dcb: true

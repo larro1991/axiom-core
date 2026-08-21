@@ -1,0 +1,20 @@
+[package]
+name = "axiom-audit"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "AXIOM Audit & Compliance Module - HIPAA/SOC2 ready logging"
+
+[features]
+default = ["std"]
+std = ["axiom-types/std", "axiom-crypto/std"]
+
+[dependencies]
+axiom-types = { workspace = true }
+axiom-crypto = { workspace = true }
+blake3 = { workspace = true }
+hashbrown = { workspace = true }
+thiserror = { workspace = true }
+hex = { version = "0.4", default-features = false, features = ["alloc"] }
+ed25519-dalek = { workspace = true }

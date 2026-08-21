@@ -1,0 +1,75 @@
+[Unit]
+Description=Forge Node - AXIOM Protocol Runtime
+Documentation=https://github.com/larro1991/axiom-core
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=forge-node
+Group=forge-node
+
+# Placeholder path - not built/installed by this task. Drop the compiled
+# forge-node binary here at deploy time (see deploy/README.md).
+ExecStart=/opt/forge-node/forge-node --config /etc/forge/config.toml
+
+# Long-running network service: on-failure restarts on crash/non-zero exit
+# but does NOT loop-restart a clean `Stop` (exit 0) or a deliberate
+# systemctl stop, unlike `Restart=always`. See deploy/README.md for the
+# full rationale.
+Restart=on-failure
+RestartSec=5s
+
+# --- Sandboxing ---
+# Dedicated non-root service user (see deploy/README.md for the
+# useradd/groupadd + directory setup this depends on).
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+
+# forge-node only ever writes inside its data_dir (NodeConfig::data_dir,
+# default /var/lib/forge - node.key, control.sock, link-local discovery
+# state). /etc/forge (config.toml, capability_policy.toml) is intentionally
+# NOT in this list - both are meant to stay read-only to the service user;
+# see forge-node/src/policy.rs's module doc comment on why the capability
+# policy file specifically must not be writable by the process it governs.
+ReadWritePaths=/var/lib/forge
+
+# Additional defense-in-depth sandboxing (safe defaults for a service with
+# no legitimate need for any of these).
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RemoveIPC=true
+
+# forge-node needs outbound/inbound UDP+TCP (LAN link-local discovery, WAN
+# QUIC transport) - AF_UNIX for the control socket - and AF_NETLINK
+# (2026-08-06 finding, live deploy): the `netwatch` crate iroh's WAN
+# transport pulls in for interface-change monitoring opens a
+# NETLINK_ROUTE socket to watch for network changes; without AF_NETLINK
+# here that call fails ("Address family not supported by protocol") and
+# netwatch falls back to polling instead of event-driven monitoring -
+# non-fatal (WAN relay connectivity still comes up fine) but spams a WARN
+# on retry indefinitely and isn't the intended behavior. A NETLINK_ROUTE
+# socket without CAP_NET_ADMIN (which this unit does not grant) can only
+# listen for changes, not inject routes - permitting it here doesn't
+# reopen any of the privilege this sandboxing is meant to close.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# journald is the log sink (default systemd behavior - forge-node logs via
+# `tracing`/`FmtSubscriber` to stdout/stderr, no independent log file of
+# its own today, so nothing fights this).
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=forge-node
+
+[Install]
+WantedBy=multi-user.target

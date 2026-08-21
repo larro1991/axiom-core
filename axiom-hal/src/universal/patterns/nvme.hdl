@@ -1,0 +1,203 @@
+// NVMe Storage Controller - Universal Driver HDL-Lite
+// High-performance PCIe SSD interface
+
+device nvme_controller {
+    name: "NVMe Storage Controller"
+    class: storage
+    bus: pcie
+
+    // Common NVMe controller IDs
+    match {
+        // Intel Optane
+        { vendor: 0x8086, device: 0x2700 }  // Optane 900P
+        { vendor: 0x8086, device: 0x2701 }  // Optane 905P
+        { vendor: 0x8086, device: 0x0953 }  // DC P3500/P3600/P3700
+        { vendor: 0x8086, device: 0x0A54 }  // DC P4500/P4600
+        { vendor: 0x8086, device: 0xF1A5 }  // SSD 660p/670p
+        { vendor: 0x8086, device: 0xF1A6 }  // SSD 760p
+
+        // Samsung
+        { vendor: 0x144D, device: 0xA808 }  // 970 EVO/EVO Plus
+        { vendor: 0x144D, device: 0xA809 }  // 980 PRO
+        { vendor: 0x144D, device: 0xA80A }  // 990 PRO
+        { vendor: 0x144D, device: 0xA804 }  // PM981/PM9A1
+
+        // Western Digital / SanDisk
+        { vendor: 0x15B7, device: 0x5006 }  // WD Black SN750
+        { vendor: 0x15B7, device: 0x5009 }  // WD Black SN850
+        { vendor: 0x15B7, device: 0x5017 }  // WD Black SN770
+
+        // SK Hynix
+        { vendor: 0x1C5C, device: 0x174A }  // Gold P31
+        { vendor: 0x1C5C, device: 0x1959 }  // Platinum P41
+
+        // Crucial/Micron
+        { vendor: 0xC0A9, device: 0x540A }  // P5 Plus
+        { vendor: 0x1344, device: 0x5410 }  // Micron 7400
+
+        // Kingston
+        { vendor: 0x2646, device: 0x5008 }  // KC2500
+        { vendor: 0x2646, device: 0x500D }  // KC3000
+
+        // Sabrent
+        { vendor: 0x1987, device: 0x5016 }  // Rocket 4 Plus
+
+        // Generic NVMe class
+        { class: 0x010802 }  // Mass storage / NVMe
+    }
+
+    // NVMe BAR0 - Controller Registers
+    registers(bar: 0) {
+        CAP       @ 0x00 : u64   // Controller Capabilities
+        VS        @ 0x08 : u32   // Version
+        INTMS     @ 0x0C : u32   // Interrupt Mask Set
+        INTMC     @ 0x10 : u32   // Interrupt Mask Clear
+        CC        @ 0x14 : u32   // Controller Configuration
+        CSTS      @ 0x1C : u32   // Controller Status
+        NSSR      @ 0x20 : u32   // NVM Subsystem Reset
+        AQA       @ 0x24 : u32   // Admin Queue Attributes
+        ASQ       @ 0x28 : u64   // Admin Submission Queue Base
+        ACQ       @ 0x30 : u64   // Admin Completion Queue Base
+        CMBLOC    @ 0x38 : u32   // Controller Memory Buffer Location
+        CMBSZ     @ 0x3C : u32   // Controller Memory Buffer Size
+
+        // Doorbell stride from CAP
+        SQ0TDBL   @ 0x1000 : u32  // Submission Queue 0 Tail Doorbell
+        CQ0HDBL   @ 0x1004 : u32  // Completion Queue 0 Head Doorbell
+    }
+
+    // Submission Queue Entry (64 bytes)
+    struct submission_queue_entry {
+        opcode    : u8      // Command opcode
+        flags     : u8      // Fused operation, PSDT
+        command_id: u16     // Command identifier
+        nsid      : u32     // Namespace identifier
+        reserved1 : u64
+        mptr      : u64     // Metadata pointer
+        prp1      : u64     // PRP Entry 1
+        prp2      : u64     // PRP Entry 2
+        cdw10     : u32     // Command dword 10
+        cdw11     : u32     // Command dword 11
+        cdw12     : u32     // Command dword 12
+        cdw13     : u32     // Command dword 13
+        cdw14     : u32     // Command dword 14
+        cdw15     : u32     // Command dword 15
+    }
+
+    // Completion Queue Entry (16 bytes)
+    struct completion_queue_entry {
+        dw0       : u32     // Command specific
+        dw1       : u32     // Reserved
+        sq_head   : u16     // SQ Head Pointer
+        sq_id     : u16     // SQ Identifier
+        command_id: u16     // Command Identifier
+        status    : u16     // Status Field (includes phase bit)
+    }
+
+    // Admin commands
+    const ADMIN_DELETE_IO_SQ = 0x00
+    const ADMIN_CREATE_IO_SQ = 0x01
+    const ADMIN_DELETE_IO_CQ = 0x04
+    const ADMIN_CREATE_IO_CQ = 0x05
+    const ADMIN_IDENTIFY     = 0x06
+    const ADMIN_ABORT        = 0x08
+    const ADMIN_SET_FEATURES = 0x09
+    const ADMIN_GET_FEATURES = 0x0A
+
+    // I/O commands
+    const IO_FLUSH   = 0x00
+    const IO_WRITE   = 0x01
+    const IO_READ    = 0x02
+    const IO_DATASET = 0x09  // TRIM/Deallocate
+
+    operations {
+        init {
+            // Wait for controller ready
+            wait(CSTS.RDY == 0, timeout: 5000ms)
+
+            // Read capabilities
+            let cap = read(CAP)
+            let doorbell_stride = 4 << ((cap >> 32) & 0xF)
+            let max_queue_entries = (cap & 0xFFFF) + 1
+
+            // Configure controller
+            // CC: IOCQES=4 (16 bytes), IOSQES=6 (64 bytes), MPS=0, CSS=0, EN=1
+            write(CC, 0x00460001)
+
+            // Wait for ready
+            wait(CSTS.RDY == 1, timeout: 5000ms)
+        }
+
+        create_io_queues(sq_entries: u16, cq_entries: u16, sq_addr: u64, cq_addr: u64) {
+            // Create completion queue first
+            submit_admin_cmd(
+                opcode: ADMIN_CREATE_IO_CQ,
+                cdw10: (cq_entries << 16) | 1,  // QSIZE | QID=1
+                cdw11: 0x03,                     // PC=1, IEN=1, IV=0
+                prp1: cq_addr
+            )
+
+            // Create submission queue
+            submit_admin_cmd(
+                opcode: ADMIN_CREATE_IO_SQ,
+                cdw10: (sq_entries << 16) | 1,  // QSIZE | QID=1
+                cdw11: (1 << 16) | 0x01,        // CQID=1, PC=1
+                prp1: sq_addr
+            )
+        }
+
+        read(lba: u64, blocks: u16, buffer: u64) {
+            submit_io_cmd(
+                opcode: IO_READ,
+                nsid: 1,
+                prp1: buffer,
+                cdw10: lba & 0xFFFFFFFF,
+                cdw11: (lba >> 32) & 0xFFFFFFFF,
+                cdw12: blocks - 1
+            )
+        }
+
+        write(lba: u64, blocks: u16, buffer: u64) {
+            submit_io_cmd(
+                opcode: IO_WRITE,
+                nsid: 1,
+                prp1: buffer,
+                cdw10: lba & 0xFFFFFFFF,
+                cdw11: (lba >> 32) & 0xFFFFFFFF,
+                cdw12: blocks - 1
+            )
+        }
+
+        flush {
+            submit_io_cmd(
+                opcode: IO_FLUSH,
+                nsid: 1
+            )
+        }
+
+        trim(lba: u64, blocks: u32, range_buffer: u64) {
+            submit_io_cmd(
+                opcode: IO_DATASET,
+                nsid: 1,
+                prp1: range_buffer,
+                cdw10: 0,        // Number of ranges - 1
+                cdw11: 0x04      // AD=1 (deallocate)
+            )
+        }
+    }
+
+    features {
+        max_transfer_size: 1MB       // Typical MDTS
+        queue_depth: 1024            // Entries per queue
+        max_queues: 65535            // Max I/O queue pairs
+        supports_trim: true
+        supports_volatile_write_cache: true
+        supports_scatter_gather: true
+    }
+
+    power {
+        active: variable             // Depends on workload
+        idle: 50mW                   // Typical idle
+        sleep: 5mW
+    }
+}

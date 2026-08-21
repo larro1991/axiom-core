@@ -1,0 +1,218 @@
+// AHCI SATA Controller - Universal Driver HDL-Lite
+// Serial ATA host controller interface
+
+device ahci_controller {
+    name: "AHCI SATA Controller"
+    class: storage
+    bus: pcie
+
+    match {
+        // Intel AHCI
+        { vendor: 0x8086, device: 0x8C02 }  // 8 Series
+        { vendor: 0x8086, device: 0x9D03 }  // Sunrise Point
+        { vendor: 0x8086, device: 0xA102 }  // 100 Series
+        { vendor: 0x8086, device: 0xA282 }  // 200 Series
+        { vendor: 0x8086, device: 0xA352 }  // 300 Series
+        { vendor: 0x8086, device: 0x06D2 }  // 400 Series
+        { vendor: 0x8086, device: 0x43D2 }  // 500 Series
+        { vendor: 0x8086, device: 0x7AE2 }  // 600 Series
+
+        // AMD AHCI
+        { vendor: 0x1022, device: 0x7901 }  // FCH SATA
+        { vendor: 0x1022, device: 0x7904 }  // FCH SATA RAID
+        { vendor: 0x1022, device: 0x43C8 }  // X570
+        { vendor: 0x1022, device: 0x43EB }  // B550
+        { vendor: 0x1022, device: 0x43F6 }  // X670
+
+        // ASMedia
+        { vendor: 0x1B21, device: 0x0612 }  // ASM1062
+        { vendor: 0x1B21, device: 0x1164 }  // ASM1164
+
+        // Marvell
+        { vendor: 0x1B4B, device: 0x9172 }  // 88SE9172
+        { vendor: 0x1B4B, device: 0x9230 }  // 88SE9230
+
+        // Generic AHCI class
+        { class: 0x010601 }  // Mass storage / SATA / AHCI
+    }
+
+    // AHCI BAR5 - ABAR (AHCI Base Address Register)
+    registers(bar: 5) {
+        // Generic Host Control
+        CAP       @ 0x00 : u32   // Host Capabilities
+        GHC       @ 0x04 : u32   // Global Host Control
+        IS        @ 0x08 : u32   // Interrupt Status
+        PI        @ 0x0C : u32   // Ports Implemented
+        VS        @ 0x10 : u32   // AHCI Version
+        CCC_CTL   @ 0x14 : u32   // Command Completion Coalescing Control
+        CCC_PORTS @ 0x18 : u32   // CCC Ports
+        EM_LOC    @ 0x1C : u32   // Enclosure Management Location
+        EM_CTL    @ 0x20 : u32   // Enclosure Management Control
+        CAP2      @ 0x24 : u32   // Host Capabilities Extended
+        BOHC      @ 0x28 : u32   // BIOS/OS Handoff Control
+
+        // Port 0 registers (repeat at +0x80 stride for ports 1-31)
+        P0CLB     @ 0x100 : u32  // Port 0 Command List Base Address
+        P0CLBU    @ 0x104 : u32  // Port 0 Command List Base Address Upper
+        P0FB      @ 0x108 : u32  // Port 0 FIS Base Address
+        P0FBU     @ 0x10C : u32  // Port 0 FIS Base Address Upper
+        P0IS      @ 0x110 : u32  // Port 0 Interrupt Status
+        P0IE      @ 0x114 : u32  // Port 0 Interrupt Enable
+        P0CMD     @ 0x118 : u32  // Port 0 Command and Status
+        P0TFD     @ 0x120 : u32  // Port 0 Task File Data
+        P0SIG     @ 0x124 : u32  // Port 0 Signature
+        P0SSTS    @ 0x128 : u32  // Port 0 SATA Status
+        P0SCTL    @ 0x12C : u32  // Port 0 SATA Control
+        P0SERR    @ 0x130 : u32  // Port 0 SATA Error
+        P0SACT    @ 0x134 : u32  // Port 0 SATA Active
+        P0CI      @ 0x138 : u32  // Port 0 Command Issue
+        P0SNTF    @ 0x13C : u32  // Port 0 SATA Notification
+        P0FBS     @ 0x140 : u32  // Port 0 FIS-based Switching Control
+    }
+
+    // Command Header (32 bytes)
+    struct command_header {
+        flags     : u16     // CFL, ATAPI, Write, Prefetch, Reset, BIST, Clear, PMP
+        prdtl     : u16     // Physical Region Descriptor Table Length
+        prdbc     : u32     // PRD Byte Count
+        ctba      : u32     // Command Table Base Address
+        ctbau     : u32     // Command Table Base Address Upper
+        reserved  : u128    // Reserved
+    }
+
+    // Physical Region Descriptor Table Entry (16 bytes)
+    struct prdt_entry {
+        dba       : u32     // Data Base Address
+        dbau      : u32     // Data Base Address Upper
+        reserved  : u32
+        dbc       : u32     // Data Byte Count (bit 31 = interrupt on completion)
+    }
+
+    // Command Table
+    struct command_table {
+        cfis      : u8[64]  // Command FIS
+        acmd      : u8[16]  // ATAPI Command
+        reserved  : u8[48]
+        prdt      : prdt_entry[]  // PRDT entries
+    }
+
+    // FIS types
+    const FIS_REG_H2D     = 0x27  // Register FIS - Host to Device
+    const FIS_REG_D2H     = 0x34  // Register FIS - Device to Host
+    const FIS_DMA_ACTIVATE = 0x39
+    const FIS_DMA_SETUP   = 0x41
+    const FIS_DATA        = 0x46
+    const FIS_BIST        = 0x58
+    const FIS_PIO_SETUP   = 0x5F
+    const FIS_SET_BITS    = 0xA1
+
+    // ATA commands
+    const ATA_READ_DMA_EXT    = 0x25
+    const ATA_WRITE_DMA_EXT   = 0x35
+    const ATA_READ_FPDMA      = 0x60  // NCQ read
+    const ATA_WRITE_FPDMA     = 0x61  // NCQ write
+    const ATA_FLUSH_CACHE_EXT = 0xEA
+    const ATA_IDENTIFY        = 0xEC
+    const ATA_DATA_SET_MGMT   = 0x06  // TRIM
+
+    operations {
+        init {
+            // Enable AHCI mode
+            set(GHC, bit: 31)  // AE = 1
+
+            // Get implemented ports
+            let ports = read(PI)
+
+            // For each implemented port
+            for port in ports.bits() {
+                let port_base = 0x100 + (port * 0x80)
+
+                // Stop command engine
+                clear(port_base + 0x18, bit: 0)   // ST = 0
+                clear(port_base + 0x18, bit: 4)   // FRE = 0
+                wait((port_base + 0x18).CR == 0, timeout: 500ms)
+                wait((port_base + 0x18).FR == 0, timeout: 500ms)
+
+                // Set command list and FIS base addresses
+                // (addresses provided by caller)
+
+                // Start command engine
+                set(port_base + 0x18, bit: 4)    // FRE = 1
+                set(port_base + 0x18, bit: 0)    // ST = 1
+            }
+        }
+
+        identify(port: u8, buffer: u64) {
+            build_fis_h2d(
+                command: ATA_IDENTIFY,
+                device: 0xE0,
+                count: 1
+            )
+            issue_command(port, slot: 0, prdt: [(buffer, 512)])
+            wait_completion(port, slot: 0)
+        }
+
+        read(port: u8, lba: u64, sectors: u16, buffer: u64) {
+            build_fis_h2d(
+                command: ATA_READ_DMA_EXT,
+                device: 0x40,
+                lba: lba,
+                count: sectors
+            )
+            let size = sectors * 512
+            issue_command(port, slot: 0, prdt: [(buffer, size)])
+            wait_completion(port, slot: 0)
+        }
+
+        write(port: u8, lba: u64, sectors: u16, buffer: u64) {
+            build_fis_h2d(
+                command: ATA_WRITE_DMA_EXT,
+                device: 0x40,
+                lba: lba,
+                count: sectors,
+                write: true
+            )
+            let size = sectors * 512
+            issue_command(port, slot: 0, prdt: [(buffer, size)])
+            wait_completion(port, slot: 0)
+        }
+
+        flush(port: u8) {
+            build_fis_h2d(
+                command: ATA_FLUSH_CACHE_EXT,
+                device: 0x40
+            )
+            issue_command(port, slot: 0)
+            wait_completion(port, slot: 0)
+        }
+
+        ncq_read(port: u8, tag: u8, lba: u64, sectors: u16, buffer: u64) {
+            build_fis_h2d(
+                command: ATA_READ_FPDMA,
+                device: 0x40,
+                lba: lba,
+                count: sectors,
+                tag: tag
+            )
+            issue_command(port, slot: tag, prdt: [(buffer, sectors * 512)])
+            // NCQ: don't wait, poll SACT for completion
+        }
+    }
+
+    features {
+        max_ports: 32
+        max_commands_per_port: 32   // NCQ depth
+        supports_ncq: true
+        supports_hot_plug: true
+        supports_staggered_spin_up: true
+        supports_aggressive_power_mgmt: true
+        sector_size: 512            // Or 4096 for Advanced Format
+    }
+
+    power {
+        active: 2W
+        partial: 100mW              // SATA partial power state
+        slumber: 10mW               // SATA slumber power state
+        devslp: 5mW                 // Device sleep
+    }
+}

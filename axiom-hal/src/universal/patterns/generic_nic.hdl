@@ -1,0 +1,54 @@
+# Generic Network Interface Controller
+# Minimal fallback pattern for unknown NIC devices
+
+device:
+  name: "Generic NIC"
+  vendor_id: 0xFFFF
+  device_id: 0xFFFF
+  class: network
+
+memory_map:
+  bar0:
+    size: 4096
+    registers:
+      - name: STATUS
+        offset: 0x00
+        width: 32
+        access: read_only
+      - name: CONTROL
+        offset: 0x04
+        width: 32
+        access: read_write
+      - name: INTERRUPT_STATUS
+        offset: 0x08
+        width: 32
+        access: read_write
+      - name: INTERRUPT_MASK
+        offset: 0x0C
+        width: 32
+        access: read_write
+
+interrupts:
+  type: polling
+
+init_sequence:
+  - read: STATUS -> initial_status
+
+operations:
+  reset:
+    steps:
+      - write: CONTROL, 0x00000001
+      - wait_ms: 100
+      - poll: STATUS, 0, timeout: 1000ms
+
+  enable:
+    steps:
+      - write: CONTROL, 0x00000002
+
+  disable:
+    steps:
+      - write: CONTROL, 0x00000000
+
+quirks:
+  - requires_manual_discovery
+  - no_dma_support

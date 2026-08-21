@@ -1,0 +1,21 @@
+[package]
+name = "axiom-runtime"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "AI agent runtime - ties HAL + Protocol together"
+
+[features]
+default = ["std"]
+std = ["axiom-types/std", "axiom-router/std", "axiom-hal/std", "tokio"]
+
+[dependencies]
+axiom-types = { workspace = true }
+axiom-crypto = { workspace = true }
+axiom-router = { workspace = true }
+axiom-hal = { workspace = true }
+hashbrown = { workspace = true }
+blake3 = { workspace = true }
+tokio = { workspace = true, optional = true }
+thiserror = { workspace = true }

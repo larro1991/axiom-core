@@ -1,0 +1,19 @@
+[package]
+name = "axiom-types"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Core types and primitives for AXIOM protocol"
+
+[features]
+default = ["std"]
+std = []
+serde = ["dep:serde"]
+
+[dependencies]
+serde = { workspace = true, optional = true }
+thiserror = { workspace = true }
+
+# no_std compatible
+hashbrown = { workspace = true }

@@ -1,0 +1,27 @@
+[package]
+name = "axiom-node"
+version = "0.1.0"
+edition = "2021"
+description = "AXIOM Protocol Node - Live network testing binary"
+authors = ["AI-OS Team"]
+
+[[bin]]
+name = "axiom-node"
+path = "src/main.rs"
+
+[dependencies]
+# Internal crates
+axiom-types = { path = "../axiom-types" }
+axiom-codec = { path = "../axiom-codec" }
+axiom-crypto = { path = "../axiom-crypto", features = ["std"] }
+axiom-transport = { path = "../axiom-transport", features = ["std"] }
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

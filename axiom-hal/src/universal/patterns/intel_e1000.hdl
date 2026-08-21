@@ -1,0 +1,492 @@
+# Intel E1000/E1000E Gigabit Ethernet Controller
+# One of the most common and well-documented NICs
+# Reference: Intel 82540EP/EM Software Developer's Manual
+
+device:
+  name: Intel-E1000
+  class: network
+  version: "2.0"
+  vendor_id: 0x8086
+  device_id: 0x100E  # 82540EM (QEMU default)
+  description: "Intel PRO/1000 Gigabit Ethernet"
+
+variants:
+  - device_id: 0x100E
+    name: "82540EM"
+  - device_id: 0x100F
+    name: "82545EM"
+  - device_id: 0x10D3
+    name: "82574L"
+  - device_id: 0x10EA
+    name: "82577LM"
+  - device_id: 0x1502
+    name: "82579LM"
+  - device_id: 0x1503
+    name: "82579V"
+  - device_id: 0x153A
+    name: "I217-LM"
+  - device_id: 0x153B
+    name: "I217-V"
+  - device_id: 0x15A0
+    name: "I218-LM"
+  - device_id: 0x15A1
+    name: "I218-V"
+  - device_id: 0x15A2
+    name: "I218-LM3"
+  - device_id: 0x15A3
+    name: "I218-V3"
+  - device_id: 0x156F
+    name: "I219-LM"
+  - device_id: 0x1570
+    name: "I219-V"
+
+memory_map:
+  - name: BAR0
+    size: 0x20000
+    type: mmio
+    description: "Main register space"
+
+registers:
+  # Device Control
+  - name: CTRL
+    offset: 0x0000
+    size: 4
+    access: rw
+    description: "Device Control"
+    fields:
+      - name: FD
+        bit: 0
+        description: "Full Duplex"
+      - name: LRST
+        bit: 3
+        description: "Link Reset"
+      - name: ASDE
+        bit: 5
+        description: "Auto-Speed Detection Enable"
+      - name: SLU
+        bit: 6
+        description: "Set Link Up"
+      - name: ILOS
+        bit: 7
+        description: "Invert Loss-of-Signal"
+      - name: RST
+        bit: 26
+        description: "Device Reset"
+      - name: VME
+        bit: 30
+        description: "VLAN Mode Enable"
+      - name: PHY_RST
+        bit: 31
+        description: "PHY Reset"
+
+  # Device Status
+  - name: STATUS
+    offset: 0x0008
+    size: 4
+    access: ro
+    description: "Device Status"
+    fields:
+      - name: FD
+        bit: 0
+        description: "Full Duplex"
+      - name: LU
+        bit: 1
+        description: "Link Up"
+      - name: TXOFF
+        bit: 4
+        description: "Transmission Paused"
+      - name: SPEED
+        bits: [7, 6]
+        description: "Link Speed (00=10M, 01=100M, 10=1G, 11=1G)"
+
+  # EEPROM/Flash Control
+  - name: EECD
+    offset: 0x0010
+    size: 4
+    access: rw
+    description: "EEPROM/Flash Control"
+
+  - name: EERD
+    offset: 0x0014
+    size: 4
+    access: rw
+    description: "EEPROM Read"
+
+  # Interrupt registers
+  - name: ICR
+    offset: 0x00C0
+    size: 4
+    access: ro
+    description: "Interrupt Cause Read"
+
+  - name: ICS
+    offset: 0x00C8
+    size: 4
+    access: wo
+    description: "Interrupt Cause Set"
+
+  - name: IMS
+    offset: 0x00D0
+    size: 4
+    access: rw
+    description: "Interrupt Mask Set/Read"
+
+  - name: IMC
+    offset: 0x00D8
+    size: 4
+    access: wo
+    description: "Interrupt Mask Clear"
+
+  # Receive registers
+  - name: RCTL
+    offset: 0x0100
+    size: 4
+    access: rw
+    description: "Receive Control"
+    fields:
+      - name: EN
+        bit: 1
+        description: "Receiver Enable"
+      - name: SBP
+        bit: 2
+        description: "Store Bad Packets"
+      - name: UPE
+        bit: 3
+        description: "Unicast Promiscuous Enable"
+      - name: MPE
+        bit: 4
+        description: "Multicast Promiscuous Enable"
+      - name: BAM
+        bit: 15
+        description: "Broadcast Accept Mode"
+      - name: BSIZE
+        bits: [17, 16]
+        description: "Receive Buffer Size"
+      - name: SECRC
+        bit: 26
+        description: "Strip Ethernet CRC"
+
+  - name: RDBAL
+    offset: 0x2800
+    size: 4
+    access: rw
+    description: "RX Descriptor Base Address Low"
+
+  - name: RDBAH
+    offset: 0x2804
+    size: 4
+    access: rw
+    description: "RX Descriptor Base Address High"
+
+  - name: RDLEN
+    offset: 0x2808
+    size: 4
+    access: rw
+    description: "RX Descriptor Length"
+
+  - name: RDH
+    offset: 0x2810
+    size: 4
+    access: rw
+    description: "RX Descriptor Head"
+
+  - name: RDT
+    offset: 0x2818
+    size: 4
+    access: rw
+    description: "RX Descriptor Tail"
+
+  # Transmit registers
+  - name: TCTL
+    offset: 0x0400
+    size: 4
+    access: rw
+    description: "Transmit Control"
+    fields:
+      - name: EN
+        bit: 1
+        description: "Transmitter Enable"
+      - name: PSP
+        bit: 3
+        description: "Pad Short Packets"
+      - name: CT
+        bits: [11, 4]
+        description: "Collision Threshold"
+      - name: COLD
+        bits: [21, 12]
+        description: "Collision Distance"
+
+  - name: TDBAL
+    offset: 0x3800
+    size: 4
+    access: rw
+    description: "TX Descriptor Base Address Low"
+
+  - name: TDBAH
+    offset: 0x3804
+    size: 4
+    access: rw
+    description: "TX Descriptor Base Address High"
+
+  - name: TDLEN
+    offset: 0x3808
+    size: 4
+    access: rw
+    description: "TX Descriptor Length"
+
+  - name: TDH
+    offset: 0x3810
+    size: 4
+    access: rw
+    description: "TX Descriptor Head"
+
+  - name: TDT
+    offset: 0x3818
+    size: 4
+    access: rw
+    description: "TX Descriptor Tail"
+
+  # MAC Address
+  - name: RAL0
+    offset: 0x5400
+    size: 4
+    access: rw
+    description: "Receive Address Low (MAC bytes 0-3)"
+
+  - name: RAH0
+    offset: 0x5404
+    size: 4
+    access: rw
+    description: "Receive Address High (MAC bytes 4-5 + flags)"
+
+  # Multicast Table Array
+  - name: MTA
+    offset: 0x5200
+    size: 512
+    access: rw
+    description: "Multicast Table Array (128 x 32-bit)"
+
+constants:
+  # Interrupt bits
+  INT_TXDW: 0x01      # TX Descriptor Written Back
+  INT_TXQE: 0x02      # TX Queue Empty
+  INT_LSC: 0x04       # Link Status Change
+  INT_RXSEQ: 0x08     # RX Sequence Error
+  INT_RXDMT0: 0x10    # RX Descriptor Min Threshold
+  INT_RXO: 0x40       # RX Overrun
+  INT_RXT0: 0x80      # RX Timer
+
+  # Buffer sizes
+  BSIZE_2048: 0x00
+  BSIZE_1024: 0x01
+  BSIZE_512: 0x02
+  BSIZE_256: 0x03
+
+init_sequence:
+  # Disable interrupts
+  - write:
+      register: IMC
+      value: 0xFFFFFFFF
+
+  # Global reset
+  - write:
+      register: CTRL
+      value: 0x04000000  # RST bit
+  - wait_ms: 10
+
+  # Wait for reset complete
+  - poll:
+      register: CTRL
+      expected: 0x00000000
+      mask: 0x04000000
+      timeout_ms: 1000
+
+  # Disable interrupts again after reset
+  - write:
+      register: IMC
+      value: 0xFFFFFFFF
+
+  # Clear pending interrupts
+  - read:
+      register: ICR
+      into: $icr_clear
+
+  # Read MAC from EEPROM
+  - call: read_mac_from_eeprom
+
+  # Set up receive address
+  # (MAC address loaded into RAL0/RAH0)
+
+  # Clear multicast table
+  - memset:
+      register: MTA
+      value: 0x00
+      count: 128
+
+  # Initialize RX
+  - write:
+      register: RDBAL
+      value: $rx_ring_phys_low
+  - write:
+      register: RDBAH
+      value: $rx_ring_phys_high
+  - write:
+      register: RDLEN
+      value: $rx_ring_size  # Must be 128-byte aligned
+  - write:
+      register: RDH
+      value: 0
+  - write:
+      register: RDT
+      value: $rx_ring_entries
+
+  # Enable receiver
+  - write:
+      register: RCTL
+      value: 0x04008002  # EN | BAM | SECRC | BSIZE_2048
+
+  # Initialize TX
+  - write:
+      register: TDBAL
+      value: $tx_ring_phys_low
+  - write:
+      register: TDBAH
+      value: $tx_ring_phys_high
+  - write:
+      register: TDLEN
+      value: $tx_ring_size
+  - write:
+      register: TDH
+      value: 0
+  - write:
+      register: TDT
+      value: 0
+
+  # Enable transmitter
+  - write:
+      register: TCTL
+      value: 0x0004010A  # EN | PSP | CT=0x10 | COLD=0x40
+
+  # Set link up
+  - write:
+      register: CTRL
+      value: 0x00000040  # SLU
+
+  # Enable interrupts
+  - write:
+      register: IMS
+      value: 0x000000FF  # Enable common interrupts
+
+operations:
+  - name: tx
+    type: descriptor_ring
+    description: "Transmit packet"
+    steps:
+      - read:
+          register: TDT
+          into: $tail
+      # Set up descriptor at tail
+      - increment:
+          variable: $tail
+          modulo: $tx_ring_entries
+      - write:
+          register: TDT
+          value: $tail
+
+  - name: rx_poll
+    type: descriptor_ring
+    description: "Poll for received packets"
+    returns:
+      - $rx_len
+    steps:
+      - read:
+          register: RDH
+          into: $head
+      # Check descriptors from last position to head
+
+  - name: read_mac
+    type: read
+    description: "Read MAC address from receive address registers"
+    returns:
+      - $mac_low
+      - $mac_high
+    steps:
+      - read:
+          register: RAL0
+          into: $mac_low
+      - read:
+          register: RAH0
+          into: $mac_high
+      - extract:
+          from: $mac_high
+          high_bit: 15
+          low_bit: 0
+          into: $mac_high
+
+  - name: set_promiscuous
+    type: control
+    description: "Enable/disable promiscuous mode"
+    params:
+      - enable: bool
+    steps:
+      - read:
+          register: RCTL
+          into: $rctl
+      - if:
+          condition: "$enable"
+          then:
+            - write:
+                register: RCTL
+                value: "($rctl | 0x18)"  # UPE | MPE
+          else:
+            - write:
+                register: RCTL
+                value: "($rctl & ~0x18)"
+
+  - name: get_link_status
+    type: read
+    description: "Get current link status"
+    returns:
+      - $link_up
+      - $speed
+    steps:
+      - read:
+          register: STATUS
+          into: $status
+      - extract:
+          from: $status
+          high_bit: 1
+          low_bit: 1
+          into: $link_up
+      - extract:
+          from: $status
+          high_bit: 7
+          low_bit: 6
+          into: $speed
+
+interrupts:
+  status_register: ICR
+  mask_register: IMS
+  handlers:
+    - name: tx_done
+      mask: 0x01
+      action: process_tx_complete
+    - name: link_change
+      mask: 0x04
+      action: handle_link_status
+    - name: rx_ready
+      mask: 0x80
+      action: process_rx
+
+quirks:
+  - name: e1000e_flash
+    condition: "device_id >= 0x10D3"
+    description: "E1000E variants have flash instead of EEPROM"
+    adjustments:
+      - use_flash_for_mac: true
+
+  - name: ich8_workaround
+    condition: "device_id >= 0x10EA && device_id <= 0x10EF"
+    description: "ICH8 LAN requires special PHY reset"
+    adjustments:
+      - extra_phy_reset: true
